@@ -34,6 +34,8 @@ Graph::Graph(int V)
 void Graph::addEdge(int start, int end, ll capacity, ll flow = 0)
 {
 	edgeSet[start].push_back(make_pair(end, make_pair(capacity, flow)));
+	// Uncomment the next line to get TLE, because of inefficiency of order.
+	// edgeSet[end].push_back(make_pair(start, make_pair(capacity, flow)));
 }
 
 void Graph::initializePreflow(int source)
@@ -64,7 +66,7 @@ void Graph::relabelVertex(int start)
 {
 	int minNeighbourHeight = INT_MAX;
 	for (int i = 0; i < edgeSet[start].size(); i++)
-		if (edgeSet[start][i].second.first > edgeSet[start][i].second.second && height[edgeSet[start][i].first] < minNeighbourHeight)
+		if (height[edgeSet[start][i].first] < minNeighbourHeight && edgeSet[start][i].second.first > edgeSet[start][i].second.second)
 		{
 			minNeighbourHeight = height[edgeSet[start][i].first];
 			height[start] = minNeighbourHeight + 1;
