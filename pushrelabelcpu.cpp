@@ -10,37 +10,49 @@ using namespace std;
 class Graph
 {
 public:
+	// Number of nodes in the graph.
 	int V;
+	// The height(label) and excess of each node.
 	ll *height, *excessFlow;
+	// Maintains if a node is not the source/sink, and is overflowing.
 	bool *isActive;
+	// A queue of active nodes, used for O(1) FIFO.
 	queue<int> activeNodes;
-	vector < pair <int, pair <ll, ll > > > *edgeSet;
+	// The set of edges in the graph, with each vector being the adjacency list of the ith node, and each entry having the flow
+	// and capacity of the corresponding edge.
+	vector < pair <int, pair < ll, ll > > > *edgeSet;
 
+	// The constructor for the Graph object.
 	Graph(int V);
+	// Adding an edge to the corresponding vector with the given flow and capacity.
 	void addEdge(int start, int end, ll capacity, ll flow);
+	// A simple implementation of BFS for setting the initial labels; performs slightly better by reducing number of
+	// relabellings as compared to just setting the source to have a label of |V| and others 0.
 	void BFS(int sink);
 
+	// Initializes the preflow of the graph.
 	void initializePreflow(int source, int sink);
+	// Returns the maximum flow in the graph.
 	ll maxFlow(int source, int sink);
-	ll pushFlow(int start);
+	// Pushes flow from start to one of its neighbours.
+	int pushFlow(int start);
+	// Relabels start to allow it to push flow through to one of its neighbours.
 	void relabelVertex(int start);
-	int VertexToFix(int sink, int source);
 };
 
 Graph::Graph(int V)
 {
 	this -> V = V;
-	height = new ll[V];
+	edgeSet = new vector < pair <int, pair < ll, ll > > > [V];
 	excessFlow = new ll[V];
+	height = new ll[V];
 	isActive = new bool[V];
-	edgeSet = new vector < pair <int, pair <ll, ll > > > [V];
 }
 
 void Graph::addEdge(int start, int end, ll capacity, ll flow = 0)
 {
 	edgeSet[start].push_back(make_pair(end, make_pair(capacity, flow)));
-	// Uncomment the next line to get TLE, because of inefficiency of current implementation.
-	edgeSet[end].push_back(make_pair(start, make_pair(capacity, flow)));
+	// edgeSet[end].push_back(make_pair(start, make_pair(0, 0)));
 }
 
 void Graph::BFS(int sink)
@@ -71,105 +83,109 @@ void Graph::BFS(int sink)
 
 void Graph::initializePreflow(int source, int sink)
 {
-	for (int i = 0; i < V; i++)
+	for (int i = 0; i < this -> V; i++)
 	{
-		height[i] = -1;
+		// height[i] = -1;
+		height[i] = 0;
 		excessFlow[i] = 0;
 		isActive[i] = false;
 	}
-	BFS(sink);
+	// BFS(sink);
+	height[source] = this -> V;
+	// for (int i = 0; i < edgeSet[source].size(); i++)
+	// {
+	// 	edgeSet[source][i].second.second = edgeSet[source][i].second.first;
+	// 	excessFlow[edgeSet[source][i].first] += edgeSet[source][i].second.first;
+	// 	edgeSet[edgeSet[source][i].first].push_back(make_pair(source, make_pair(0, -edgeSet[source][i].second.second)));
+	// }
 	for (int i = 0; i < edgeSet[source].size(); i++)
-	{
-		edgeSet[source][i].second.second = edgeSet[source][i].second.first;
-		excessFlow[edgeSet[source][i].first] += edgeSet[source][i].second.first;
-		edgeSet[edgeSet[source][i].first].push_back(make_pair(source, make_pair(0, -1 * edgeSet[source][i].second.second)));
-	}
-	for (int i = 0; i < V; i++)
-		if (excessFlow[i] > 0 && !isActive[i])
-		{
-			isActive[i] = true;
-			activeNodes.push(i);
-		}
-}
-
-int Graph::VertexToFix(int source, int sink)
-{
-	for (int i = 0; i < V; i++)
-		if (i != source && i != sink && excessFlow[i] > 0)
-			return i;
-	return INT_MAX;
+		excessFlow[source] += edgeSet[source][i].second.first;
 }
 
 void Graph::relabelVertex(int start)
 {
-	int minNeighbourHeight = INT_MAX;
+	ll minNeighbourHeight = LLONG_MAX;
 	for (int i = 0; i < edgeSet[start].size(); i++)
-		if (height[edgeSet[start][i].first] < minNeighbourHeight && edgeSet[start][i].second.first > edgeSet[start][i].second.second)
+		if (edgeSet[start][i].second.first > edgeSet[start][i].second.second)
 		{
-			minNeighbourHeight = height[edgeSet[start][i].first];
+			minNeighbourHeight = min(minNeighbourHeight, height[edgeSet[start][i].first]);
 			height[start] = minNeighbourHeight + 1;
 		}
 }
 
-ll Graph::pushFlow(int start)
+int Graph::pushFlow(int start)
 {
-	int neighbourToPushTo = INT_MAX, flowToPush = 0;
+	int neighbourToPushTo = INT_MAX;
+	ll flowToPush = 0;
 	for (int i = 0; i < edgeSet[start].size(); i++)
-	{
-		if (edgeSet[start][i].second.first > edgeSet[start][i].second.second && height[edgeSet[start][i].first] == height[start] - 1 && excessFlow[start] > 0)
+		if (edgeSet[start][i].second.first > edgeSet[start][i].second.second && height[edgeSet[start][i].first] == height[start] - 1/* && excessFlow[start] > 0*/)
 		{
 			neighbourToPushTo = edgeSet[start][i].first;
 			flowToPush = min(excessFlow[start], (ll)(edgeSet[start][i].second.first - edgeSet[start][i].second.second));
 			excessFlow[start] -= flowToPush;
 			excessFlow[neighbourToPushTo] += flowToPush;
 			edgeSet[start][i].second.second += flowToPush;
-			for (int j = 0; j < edgeSet[neighbourToPushTo].size(); j++)
-				if (edgeSet[neighbourToPushTo][j].first == start)
-				{
-					edgeSet[neighbourToPushTo][j].second.second -= flowToPush;
-					return neighbourToPushTo;
-				}
-			edgeSet[neighbourToPushTo].push_back(make_pair(start, make_pair(flowToPush, 0)));
-			return neighbourToPushTo;
+			break;
 		}
+	if (neighbourToPushTo != INT_MAX)
+	{
+		for (int j = 0; j < edgeSet[neighbourToPushTo].size(); j++)
+			if (edgeSet[neighbourToPushTo][j].first == start)
+			{
+				edgeSet[neighbourToPushTo][j].second.second -= flowToPush;
+				return neighbourToPushTo;
+			}
+		edgeSet[neighbourToPushTo].push_back(make_pair(start, make_pair(0, -flowToPush)));
 	}
 	return neighbourToPushTo;
 }
 
 ll Graph::maxFlow(int source, int sink)
 {
+	ll flow = 0;
 	initializePreflow(source, sink);
-	// int vertexToFix = VertexToFix(source, sink);
+	while (excessFlow[source] > 0)
+		if (pushFlow(source) == INT_MAX)
+			relabelVertex(source);
+	for (int i = 0; i < this -> V; i++)
+		if (excessFlow[i] > 0 && !isActive[i])
+		{
+			isActive[i] = true;
+			activeNodes.push(i);
+		}
 	int vertexToFix = -1;
-	// while (vertexToFix != INT_MAX)
 	while (!activeNodes.empty())
 	{
 		vertexToFix = activeNodes.front();
 		activeNodes.pop();
 		isActive[vertexToFix] = false;
+	
 		if (vertexToFix == source || vertexToFix == sink)
 			continue;
 		int neighbourToPushTo = pushFlow(vertexToFix);
-		if (neighbourToPushTo == INT_MAX)
+		// cout << "PUSHING FROM " << vertexToFix << " TO " << neighbourToPushTo << '\n';
+		// cout << height[vertexToFix] << ' ' << height[neighbourToPushTo] << '\n';
+		while (neighbourToPushTo != INT_MAX)
+		{
+			if (!isActive[neighbourToPushTo])
+			{
+				isActive[neighbourToPushTo] = true;
+				activeNodes.push(neighbourToPushTo);
+			}
+			if (excessFlow[vertexToFix] > 0)
+				neighbourToPushTo = pushFlow(vertexToFix);
+			else
+				break;
+		}
+		if (excessFlow[vertexToFix] > 0)
 		{
 			relabelVertex(vertexToFix);
 			activeNodes.push(vertexToFix);
-			isActive[vertexToFix]= true;
-		}
-		else
-			if (excessFlow[neighbourToPushTo] > 0 && !isActive[neighbourToPushTo])
-			{
-				activeNodes.push(neighbourToPushTo);
-				isActive[neighbourToPushTo] = true;
-			}
-		if (excessFlow[vertexToFix] > 0)
-		{
-			activeNodes.push(vertexToFix);
 			isActive[vertexToFix] = true;
 		}
-		vertexToFix = VertexToFix(source, sink);
+		// cout << "Queue size " << activeNodes.size() << '\n';
 	}
-	return excessFlow[sink];
+	return (flow = excessFlow[sink]);
 }
 
 int main()
@@ -180,7 +196,11 @@ int main()
 	while (m--)
 	{
 		cin >> x >> y >> z;
-		g.addEdge(x - 1, y - 1, z);
+		if (x != y)	// Not handling self loops as flow does not change, and undirected graph.
+		{
+			g.addEdge(x - 1, y - 1, z);
+			g.addEdge(y - 1, x - 1, z);
+		}
 	}
 	cout << g.maxFlow(0, n - 1) << '\n';
 	return 0;
