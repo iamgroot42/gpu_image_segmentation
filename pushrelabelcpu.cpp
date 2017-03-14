@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
 #include <limits.h>
+#include <queue>
 #include <vector>
 
 #define ll long long
@@ -10,17 +11,20 @@ class Graph
 {
 public:
 	int V;
-	vector < pair <int, pair <ll, ll > > > *edgeSet;
 	ll *height, *excessFlow;
+	bool *isActive;
+	queue<int> activeNodes;
+	vector < pair <int, pair <ll, ll > > > *edgeSet;
 
 	Graph(int V);
 	void addEdge(int start, int end, ll capacity, ll flow);
+	void BFS(int sink);
 
-	void initializePreflow(int source);
-	int VertexToFix(int sink, int source);
-	void relabelVertex(int start);
-	ll pushFlow(int start);
+	void initializePreflow(int source, int sink);
 	ll maxFlow(int source, int sink);
+	ll pushFlow(int start);
+	void relabelVertex(int start);
+	int VertexToFix(int sink, int source);
 };
 
 Graph::Graph(int V)
@@ -28,30 +32,64 @@ Graph::Graph(int V)
 	this -> V = V;
 	height = new ll[V];
 	excessFlow = new ll[V];
+	isActive = new bool[V];
 	edgeSet = new vector < pair <int, pair <ll, ll > > > [V];
 }
 
 void Graph::addEdge(int start, int end, ll capacity, ll flow = 0)
 {
 	edgeSet[start].push_back(make_pair(end, make_pair(capacity, flow)));
-	// Uncomment the next line to get TLE, because of inefficiency of order.
-	// edgeSet[end].push_back(make_pair(start, make_pair(capacity, flow)));
+	// Uncomment the next line to get TLE, because of inefficiency of current implementation.
+	edgeSet[end].push_back(make_pair(start, make_pair(capacity, flow)));
 }
 
-void Graph::initializePreflow(int source)
+void Graph::BFS(int sink)
+{
+	bool *visited = new bool[V];
+	queue<int> q;
+	for (int i = 0; i < V; i++)
+		visited[i] = false;
+	height[sink] = 0;
+	visited[sink] = true;
+	q.push(sink);
+	while (!q.empty())
+	{
+		int x = q.front();
+		q.pop();
+		for (int i = 0; i < edgeSet[x].size(); i++)
+		{
+			int neighbourToVisit = edgeSet[x][i].first;
+			if (!visited[neighbourToVisit])
+			{
+				visited[neighbourToVisit] = true;
+				height[neighbourToVisit] = height[x] + 1;
+				q.push(neighbourToVisit);
+			}
+		}
+	}
+}
+
+void Graph::initializePreflow(int source, int sink)
 {
 	for (int i = 0; i < V; i++)
 	{
-		height[i] = 0;
+		height[i] = -1;
 		excessFlow[i] = 0;
+		isActive[i] = false;
 	}
-	height[source] = this -> V;
+	BFS(sink);
 	for (int i = 0; i < edgeSet[source].size(); i++)
 	{
 		edgeSet[source][i].second.second = edgeSet[source][i].second.first;
 		excessFlow[edgeSet[source][i].first] += edgeSet[source][i].second.first;
 		edgeSet[edgeSet[source][i].first].push_back(make_pair(source, make_pair(0, -1 * edgeSet[source][i].second.second)));
 	}
+	for (int i = 0; i < V; i++)
+		if (excessFlow[i] > 0 && !isActive[i])
+		{
+			isActive[i] = true;
+			activeNodes.push(i);
+		}
 }
 
 int Graph::VertexToFix(int source, int sink)
@@ -100,12 +138,35 @@ ll Graph::pushFlow(int start)
 
 ll Graph::maxFlow(int source, int sink)
 {
-	initializePreflow(source);
-	int vertexToFix = VertexToFix(source, sink);
-	while (vertexToFix != INT_MAX)
+	initializePreflow(source, sink);
+	// int vertexToFix = VertexToFix(source, sink);
+	int vertexToFix = -1;
+	// while (vertexToFix != INT_MAX)
+	while (!activeNodes.empty())
 	{
-		if (pushFlow(vertexToFix) == INT_MAX)
+		vertexToFix = activeNodes.front();
+		activeNodes.pop();
+		isActive[vertexToFix] = false;
+		if (vertexToFix == source || vertexToFix == sink)
+			continue;
+		int neighbourToPushTo = pushFlow(vertexToFix);
+		if (neighbourToPushTo == INT_MAX)
+		{
 			relabelVertex(vertexToFix);
+			activeNodes.push(vertexToFix);
+			isActive[vertexToFix]= true;
+		}
+		else
+			if (excessFlow[neighbourToPushTo] > 0 && !isActive[neighbourToPushTo])
+			{
+				activeNodes.push(neighbourToPushTo);
+				isActive[neighbourToPushTo] = true;
+			}
+		if (excessFlow[vertexToFix] > 0)
+		{
+			activeNodes.push(vertexToFix);
+			isActive[vertexToFix] = true;
+		}
 		vertexToFix = VertexToFix(source, sink);
 	}
 	return excessFlow[sink];
