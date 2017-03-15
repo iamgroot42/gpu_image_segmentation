@@ -41,8 +41,6 @@ public:
 	int pushFlow(int start);
 	// Relabels start to allow it to push flow through to one of its neighbours.
 	void relabelVertex(int start);
-	// Discharges a vertex
-	void dischargeVertex(int start);
 };
 
 Graph::Graph(int V)
@@ -119,7 +117,7 @@ int Graph::pushFlow(int start)
 	int neighbourToPushTo = INT_MAX;
 	ll flowToPush = 0;
 	for (int i = 0; i < edgeSet[start].size(); i++)
-		if (edgeSet[start][i].second.first > edgeSet[start][i].second.second && height[edgeSet[start][i].first] == height[start] - 1/* && excessFlow[start] > 0*/)
+		if (edgeSet[start][i].second.first > edgeSet[start][i].second.second && height[edgeSet[start][i].first] == height[start] - 1)
 		{
 			neighbourToPushTo = edgeSet[start][i].first;
 			flowToPush = min(excessFlow[start], (ll)(edgeSet[start][i].second.first - edgeSet[start][i].second.second));
