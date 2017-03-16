@@ -114,7 +114,7 @@ ll Graph::MF(int source, int sink)
 	initializePreflow(source);
 
 	for (int i = 0; i < this -> V; i++){
-		if (excessFlow[i] > 0 && !isActive[i] && i != source && i != sink){
+		if (height[i] < V && excessFlow[i] > 0 && !isActive[i] && i != source && i != sink){
 			isActive[i] = true;
 			activeNodes.push(i);
 		}
@@ -123,16 +123,17 @@ ll Graph::MF(int source, int sink)
 	int vertexToFix;
 	while (!activeNodes.empty())
 	{
+		cout<<activeNodes.front()<<endl;
 		vertexToFix = activeNodes.front();
 		activeNodes.pop();
 		isActive[vertexToFix] = false;
 
 		bool break_out;
-		while(excessFlow[vertexToFix] > 0){
+		while(excessFlow[vertexToFix] > 0 && height[vertexToFix] < V){
 			break_out = true;
 			for(int i = 0; i < V; i++){
 				if(graph_weights[vertexToFix][i] > 0){
-					if(graph_flow[vertexToFix][i] > 0 && height[vertexToFix] == height[i]+1){
+					if( !isActive[i] && graph_flow[vertexToFix][i] > 0 && height[vertexToFix] == height[i]+1){
 						pushFlow(vertexToFix, i);
 						break_out = false;
 						activeNodes.push(i);
@@ -144,8 +145,7 @@ ll Graph::MF(int source, int sink)
 				break;
 			}		
 		}
-
-		if (excessFlow[vertexToFix] > 0)
+		if (excessFlow[vertexToFix] > 0 && height[vertexToFix] < V)
 		{
 			relabelVertex(vertexToFix);
 			activeNodes.push(vertexToFix);
@@ -170,6 +170,7 @@ int main()
 			g.addEdge(y - 1, x - 1, z);
 		}
 	}
+	cout<<"Called?\n";
 	cout << g.MF(0, n - 1) << endl;
 	return 0;
 }
