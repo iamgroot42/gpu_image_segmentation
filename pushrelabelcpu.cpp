@@ -186,18 +186,30 @@ ll Graph::maxFlow(int source, int sink)
 
 int main()
 {
-	int i, m, n, x, y, z;
-	cin >> n >> m;
-	Graph g(n);
-	while (m--)
+	int i, m, n, x, y, z, source, sink;
+	// cin >> n >> m;
+	n = -1;
+	int count = 1;
+	while (n)
 	{
-		cin >> x >> y >> z;
-		if (x != y)	// Not handling self loops as flow does not change, and undirected graph.
+		cin >> n;
+		if (n == 0)
+			break;
+		Graph g(n);
+		cin >> source >> sink >> m;
+		source--;
+		sink--;
+		while (m--)
 		{
-			g.addEdge(x - 1, y - 1, z);
-			g.addEdge(y - 1, x - 1, z);
+			cin >> x >> y >> z;
+			if (x != y)	// Not handling self loops as flow does not change, and undirected graph.
+			{
+				g.addEdge(x - 1, y - 1, z);
+				g.addEdge(y - 1, x - 1, z);
+			}
 		}
+		cout << "Network " << count++ << '\n';
+		cout << "The bandwidth is " << g.maxFlow(source, sink) << ".\n\n";
 	}
-	cout << g.maxFlow(0, n - 1) << '\n';
 	return 0;
 }
