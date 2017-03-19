@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <iostream>
 #include <limits.h>
+#include <map>
 #include <list>
 #include <queue>
 #include <vector>
@@ -99,7 +100,7 @@ void Graph::relabel(int u)
 
 void Graph::push(int u, int v)
 {
-	if (edgeSet[u][v].capacity < 0/* || edgeSet[u][v].flow < 0*/ || edgeSet[u][v].capacity <= edgeSet[u][v].flow || label[u] <= label[v])
+	if (edgeSet[u][v].capacity < 0/* || edgeSet[u][v].flow < 0*/ || edgeSet[u][v].capacity == edgeSet[u][v].flow || label[u] <= label[v])
 		return;
 	assert(label[u] == label[v] + 1);
 	long long flow = min(excessFlow[u], (long long)(edgeSet[u][v].capacity - edgeSet[u][v].flow));
@@ -133,21 +134,34 @@ long long Graph::maxFlow(int source, int sink)
 		active.pop();
 		if (u == source || u == sink)
 			continue;
-		for (int i = 0; i < this -> V; i++)
+		for (int i = 0; i < this -> V && excessFlow[u] > 0; i++)
 			push(u, i);
 		if (excessFlow[u] > 0)
-		{
-			cout << u << " has excessFlow " << excessFlow[u] << " and label " << label[u] << '\n';
 			relabel(u);
-			cout << u << " has excessFlow " << excessFlow[u] << " and label " << label[u] << '\n';
-		}
 	}
 	return (ans = excessFlow[sink]);
 }
 
 int main()
 {
-	int i, m, n, x, y, z;
+	int i, m, n, x, y, z, count = 1;
+	// n = -1;
+	// while (n)
+	// {
+	// 	cin >> n;
+	// 	if (!n)
+	// 		break;
+	// 	Graph g(n);
+	// 	int source, sink;
+	// 	cin >> source >> sink >> m;
+	// 	while (m--)
+	// 	{
+	// 		cin >> x >> y >> z;
+	// 		g.addEdge(x - 1, y - 1, z, 0);
+	// 	}
+	// 	cout << "Network " << count++ << '\n';
+	// 	cout << "The bandwidth is " << g.maxFlow(source - 1, sink - 1) << ".\n\n";
+	// }
 	cin >> n >> m;
 	Graph g(n);
 	while (m--)

@@ -20,7 +20,7 @@ public:
 	Graph(int V);
 	void addEdge(int start, int end, ll capacity);
 	void initializePreflow(int source);
-	ll MF(int source, int sink);
+	ll maxFlow(int source, int sink);
 	int pushFlow(int start, int end);
 	void relabelVertex(int start);
 };
@@ -111,6 +111,7 @@ ll Graph::maxFlow(int source, int sink)
 		m = -1;
 
 		for (int i = 0; i < V && excessFlow[vertexToFix] > 0; i++){
+			// cout << i << '\n';
 			if(graph_weights[vertexToFix][i]){
 				if(graph_weights[vertexToFix][i] > graph_flow[vertexToFix][i]){
 					if(height[vertexToFix] > height[i]){
@@ -143,21 +144,40 @@ ll Graph::maxFlow(int source, int sink)
 
 int main()
 {
-	int i, m, n, x, y, z;
-	cin >> n >> m;
-	Graph g(n);
-	while (m--)
+	// int i, m, n, x, y, z;
+	// cin >> n >> m;
+	// Graph g(n);
+	// while (m--)
+	// {
+	// 	cin >> x >> y >> z;
+	// 	if (x != y)	// Not handling self loops as flow does not change, and undirected graph.
+	// 	{
+	// 		g.addEdge(x - 1, y - 1, z);
+	// 		g.addEdge(y - 1, x - 1, z);
+	// 	}
+	// 	else{
+	// 		g.addEdge(x - 1, y - 1, z);
+	// 	}
+	// }
+	// cout << g.maxFlow(0, n - 1) << endl;
+	int i, m, n, x, y, z, count = 1;
+	n = -1;
+	while (n)
 	{
-		cin >> x >> y >> z;
-		if (x != y)	// Not handling self loops as flow does not change, and undirected graph.
+		cin >> n;
+		if (!n)
+			break;
+		Graph g(n);
+		int source, sink;
+		cin >> source >> sink >> m;
+		cout << source << ' ' << sink << '\n';
+		while (m--)
 		{
-			g.addEdge(x - 1, y - 1, z);
-			g.addEdge(y - 1, x - 1, z);
-		}
-		else{
+			cin >> x >> y >> z;
 			g.addEdge(x - 1, y - 1, z);
 		}
+		cout << "Network " << count++ << '\n';
+		cout << "The bandwidth is " << g.maxFlow(source - 1, sink - 1) << ".\n\n";
 	}
-	cout << g.maxFlow(0, n - 1) << endl;
 	return 0;
 }
