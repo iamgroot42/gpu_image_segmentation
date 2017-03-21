@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <algorithm>
 #include <iostream>
 #include <limits.h>
@@ -9,53 +8,46 @@
 #define ll long long
 using namespace std;
 
-struct Edge{
-	ll capacity, flow, residue;
-	int color;
-	Edge(ll capacity=-1,ll flow=-1,ll residue=0,int color=-1)
-	{
-		this->capacity=capacity;
-		this->flow=flow;
-		this->residue=residue;
-		this->color=color;
-	}
-};
-
-class Graph{
+class Graph
+{
 public:
 	int V;
 	ll *height, *excessFlow, *residual;
 	bool *isActive;
 	queue<int> activeNodes;
-	Edge **G;
+	ll **graph_flow;
+	ll **graph_weights;
 	Graph(int V);
-	void addEdge(int start, int end, ll capacity, bool color);
+	void addEdge(int start, int end, ll capacity);
 	void initializePreflow(int source);
 	ll maxFlow(int source, int sink);
 	int pushFlow(int start, int end);
 	void relabelVertex(int start);
 };
 
-Graph::Graph(int V){
+Graph::Graph(int V)
+{
 	this -> V = V;
-	G = new Edge*[V];
+	graph_flow = new ll*[V];
+	graph_weights = new ll*[V];
 	for(int i=0; i<V; i++){
-		G[i] = new Edge[V];
+		graph_flow[i] = new ll[V];
+		graph_weights[i] = new ll[V];
 	}
-	for (i = 0; i < V; i++)
-		for (j = 0; j < V; j++)
-		{
-			G[i][j].capacity = 0;
-			G[i][j].flow = 0;
-		}
 	height = new ll[V];
 	excessFlow = new ll[V];
 	isActive = new bool[V];
+	for(int i=0; i < V; i++){
+		for(int j=0; j < V; j++){
+			graph_weights[i][j] = 0;
+			graph_flow[i][j] = 0;
+		}
+	}
 }
 
-void Graph::addEdge(int start, int end, ll capacity, bool color){
-	graph_weights[start][end].capacity += capacity;
-	graph_weights[start][end].color = color;
+void Graph::addEdge(int start, int end, ll capacity)
+{
+	graph_weights[start][end] = capacity;
 }
 
 void Graph::initializePreflow(int source)
@@ -71,21 +63,13 @@ void Graph::initializePreflow(int source)
 		if(graph_weights[source][i]){
 			graph_flow[source][i] = graph_weights[source][i];
 			graph_flow[i][source] = -graph_weights[source][i];
-
-			graph_flow2[i][source] = graph_weights[source][i];
-			graph_flow2[source][i] = -graph_weights[source][i];
-
 			excessFlow[i] = graph_weights[source][i];
 			excessFlow[source] -= graph_weights[source][i];
+			//Update capacity to accomadate unirected edge
+			// graph_weights[i][source] += graph_flow[source][i];
+			// graph_weights[source][i] += graph_flow[i][source];
 		}	
 	}
-	// for(int i=0; i<V; i++){
-	// 	for(int j=0; j<V; j++){
-	// 		if(graph_weights[i][j]){
-	// 			res_graph[i][j] = graph_weights[i][j] - graph_flow[i][j];
-	// 		}
-	// 	}
-	// }
 }
 
 void Graph::relabelVertex(int start)
@@ -107,11 +91,10 @@ int Graph::pushFlow(int start, int end)
 {
 	ll delta = min(excessFlow[start], graph_weights[start][end] - graph_flow[start][end]);
 	graph_flow[start][end] += delta;
-	graph_flow[end][start] = -graph_flow[start][end];
-
-	graph_flow2[end][start] -= delta;
-	graph_flow2[start][end] = +graph_flow2[end][start];
-
+	graph_flow[end][start] -= delta;
+	//Update capacity to accomadate unirected edge
+	// graph_weights[start][end] += graph_flow[end][start];
+	// graph_weights[end][start] += graph_flow[start][end];
 	excessFlow[start] -= delta;
 	excessFlow[end] += delta;
 }
@@ -119,14 +102,8 @@ int Graph::pushFlow(int start, int end)
 ll Graph::maxFlow(int source, int sink)
 {
 	ll m;
+	ll flowwow=0;
 	initializePreflow(source);
-
-	for(int i=0; i<V; i++){
-		for(int j=0;j<V;j++){
-			cout<<graph_flow[i][j]<<" ";
-		}
-		cout<<endl;
-	}
 
 	for (int i = 0; i < V; i++){
 		if(graph_weights[source][i] && i != sink){
@@ -143,8 +120,7 @@ ll Graph::maxFlow(int source, int sink)
 		for (int i = 0; i < V && excessFlow[vertexToFix] > 0; i++){
 			// cout << i << '\n';
 			if(graph_weights[vertexToFix][i]){
-				// if(graph_weights[vertexToFix][i] > graph_flow[vertexToFix][i]){
-				if(graph_weights[vertexToFix][i] > graph_flow[i][vertexToFix]){
+				if(graph_weights[vertexToFix][i] > graph_flow[vertexToFix][i]){
 					if(height[vertexToFix] > height[i]){
 						pushFlow(vertexToFix, i);
 						if(!isActive[i] && i != source && i != sink){
@@ -159,21 +135,6 @@ ll Graph::maxFlow(int source, int sink)
 						m = min(m, height[i]);
 					}
 				}
-				// if(graph_weights[i][vertexToFix] > graph_flow2[i][vertexToFix]){
-				// 	if(height[i] > height[vertexToFix]){
-				// 		pushFlow(i, vertexToFix);
-				// 		if(!isActive[i] && i != source && i != sink){
-				// 			isActive[i] = true;
-				// 			activeNodes.push(i);
-				// 		}
-				// 	}
-				// 	else if(m == -1){
-				// 		m = height[i];
-				// 	}
-				// 	else{
-				// 		m = min(m, height[i]);
-				// 	}
-				// }
 			}
 		}
 
@@ -185,48 +146,53 @@ ll Graph::maxFlow(int source, int sink)
 			activeNodes.pop();
 		}
 	}
-	return excessFlow[sink];
+	for(int i=0;i<V;i++){
+		if(graph_weights[source][i]){
+			flowwow += graph_flow[source][i];
+		}
+	}
+	return flowwow;
 }
 
 int main()
 {
-	int i, m, n, x, y, z;
-	cin >> n >> m;
-	Graph g(n);
-	while (m--)
-	{
-		cin >> x >> y >> z;
-		if (x != y)	// Not handling self loops as flow does not change, and undirected graph.
-		{
-			g.addEdge(x - 1, y - 1, z, 0);
-			g.addEdge(y - 1, x - 1, z, 1);
-		}
-		// else{
-		// 	g.addEdge(x - 1, y - 1, z);
-		// }
-	}
-	cout << g.maxFlow(0, n - 1) << endl;
-	// int i, m, n, x, y, z, count = 1;
-	// n = -1;
-	// while (n)
+	// int i, m, n, x, y, z;
+	// cin >> n >> m;
+	// Graph g(n);
+	// while (m--)
 	// {
-	// 	cin >> n;
-	// 	if (!n)
-	// 		break;
-	// 	Graph g(n);
-	// 	int source, sink;
-	// 	cin >> source >> sink >> m;
-	// 	cout << source << ' ' << sink << '\n';
-	// 	while (m--)
+	// 	cin >> x >> y >> z;
+	// 	if (x != y)	// Not handling self loops as flow does not change, and undirected graph.
 	// 	{
-	// 		cin >> x >> y >> z;
-	// 		if(x!=y){
-	// 			g.addEdge(x - 1, y - 1, z);
-	// 			g.addEdge(y - 1, x - 1, z);
-	// 		}
+	// 		g.addEdge(x - 1, y - 1, z);
+	// 		g.addEdge(y - 1, x - 1, z);
 	// 	}
-	// 	cout << "Network " << count++ << '\n';
-	// 	cout << "The bandwidth is " << g.maxFlow(source - 1, sink - 1) << ".\n\n";
+	// 	else{
+	// 		g.addEdge(x - 1, y - 1, z);
+	// 	}
 	// }
+	// cout << g.maxFlow(0, n - 1) << endl;
+	int i, m, n, x, y, z, count = 1;
+	n = -1;
+	while (n)
+	{
+		cin >> n;
+		if (!n)
+			break;
+		Graph g(n);
+		int source, sink;
+		cin >> source >> sink >> m;
+		// cout << source << ' ' << sink << '\n';
+		while (m--)
+		{
+			cin >> x >> y >> z;
+			if(x!=y){
+				g.addEdge(x - 1, y - 1, z);
+				g.addEdge(y - 1, x - 1, z);
+			}
+		}
+		cout << "Network " << count++ << '\n';
+		cout << "The bandwidth is " << g.maxFlow(source - 1, sink - 1) << ".\n\n";
+	}
 	return 0;
 }

@@ -1,23 +1,3 @@
-// Adjacency list implementation of FIFO push relabel maximum flow
-// with the gap relabeling heuristic.  This implementation is
-// significantly faster than straight Ford-Fulkerson.  It solves
-// random problems with 10000 vertices and 1000000 edges in a few
-// seconds, though it is possible to construct test cases that
-// achieve the worst-case.
-//
-// Running time:
-//     O(|V|^3)
-//
-// INPUT: 
-//     - graph, constructed using AddEdge()
-//     - source
-//     - sink
-//
-// OUTPUT:
-//     - maximum flow value
-//     - To obtain the actual flow values, look at all edges with
-//       capacity > 0 (zero capacity edges are residual edges).
-
 #include <cmath>
 #include <vector>
 #include <iostream>
@@ -45,7 +25,6 @@ struct PushRelabel {
 
   void AddEdge(int from, int to, int cap) {
     G[from].push_back(Edge(from, to, cap, 0, G[to].size()));
-    if (from == to) G[from].back().index++;
     G[to].push_back(Edge(to, from, 0, 0, G[from].size() - 1));
   }
 
@@ -102,14 +81,6 @@ struct PushRelabel {
       excess[s] += G[s][i].cap;
       Push(G[s][i]);
     }
-    
-    for(int i=0;i < N;i++){
-      for(int j=0;j < G[i].size();j++){
-        cout<<G[i][j].cap<<" ";
-      }
-      cout<<endl;
-    }
-    // return 0;
 
     while (!Q.empty()) {
       int v = Q.front();
@@ -124,22 +95,40 @@ struct PushRelabel {
   }
 };
 
-// BEGIN CUT
-// The following code solves SPOJ problem #4110: Fast Maximum Flow (FASTFLOW)
-
 int main() {
-  int n, m;
-  scanf("%d%d", &n, &m);
+  // int n, m;
+  // scanf("%d%d", &n, &m);
 
-  PushRelabel pr(n);
-  for (int i = 0; i < m; i++) { 
-   int a, b, c;
-    scanf("%d%d%d", &a, &b, &c);
-    if (a == b) continue;
-    pr.AddEdge(a-1, b-1, c);
-    pr.AddEdge(b-1, a-1, c);
+  // PushRelabel pr(n);
+  // for (int i = 0; i < m; i++) { 
+  //  int a, b, c;
+  //   scanf("%d%d%d", &a, &b, &c);
+  //   if (a == b) continue;
+  //   pr.AddEdge(a-1, b-1, c);
+  //   pr.AddEdge(b-1, a-1, c);
+  // }
+  // printf("%Ld\n", pr.GetMaxFlow(0, n-1));
+  int i, m, n, x, y, z, count = 1;
+  n = -1;
+  while (n)
+  {
+    cin >> n;
+    if (!n)
+      break;
+    PushRelabel pr(n);
+    int source, sink;
+    cin >> source >> sink >> m;
+    // cout << source << ' ' << sink << '\n';
+    while (m--)
+    {
+      cin >> x >> y >> z;
+      if (x == y) continue;
+      pr.AddEdge(x - 1, y - 1, z);
+      pr.AddEdge(y - 1, x - 1, z);
+    }
+    cout << "Network " << count++ << '\n';
+    cout << "The bandwidth is " << pr.GetMaxFlow(source-1, sink-1) << ".\n\n";
   }
-  printf("%Ld\n", pr.GetMaxFlow(0, n-1));
   return 0;
 }
 
