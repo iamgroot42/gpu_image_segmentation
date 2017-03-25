@@ -8,12 +8,16 @@ class Graph
 {
 public:
 	bool *active;
+	bool *reachable;
 	int V;
 	int *labelCount, *label;
 	long long *excess;
 	queue<int> activeVertices;
+	list<int> *adj;
+
 	Graph(int V);
 	void addEdge(int u, int v, long long capacity);
+	void BFS(int source);
 
 	void initializePreflow(int source);
 	void markActive(int u);
@@ -31,19 +35,47 @@ Graph::Graph(int V)
 	labelCount = new int[2 * V];
 	excess = new long long[V];
 	active = new bool[V];
+	adj = new list<int> [V];
+	reachable = new bool[V];
 }
 
 void Graph::addEdge(int u, int v, long long capacity)
 {
+	adj[u].push_back(v);
 	if (edges[u][v] < 0)
 		edges[u][v] = capacity;
 	else
 		edges[u][v] += capacity;
 
+	adj[v].push_back(u);
 	if (edges[v][u] < 0)
 		edges[v][u] = capacity;
 	else
 		edges[v][u] += capacity;
+}
+
+void Graph::BFS(int source)
+{
+	list<int>::iterator iter;
+	queue<int> reachableVertices;
+
+	reachable[source] = true;
+	reachableVertices.push(source);
+	while (!reachableVertices.empty())
+	{
+		int x = reachableVertices.front(), y;
+		reachableVertices.pop();
+
+		for (iter = adj[x].begin(); iter != adj[x].end(); iter++)
+		{
+			y = *iter;
+			if (!reachable[y] && edges[x][y] > 0)
+			{
+				reachable[y] = true;
+				reachableVertices.push(y);
+			}
+		}
+	}
 }
 
 void Graph::initializePreflow(int source)
@@ -55,6 +87,7 @@ void Graph::initializePreflow(int source)
 		label[i] = 0;
 		labelCount[2 * i] = 0;
 		labelCount[2 * i + 1] = 0;
+		reachable[i] = false;
 	}
 	label[source] = this -> V;
 	labelCount[0] = this -> V - 1;
@@ -145,9 +178,8 @@ long long Graph::result(int source, int sink)
 int main()
 {
 	int i, j, n, m, x, y, z;
-	for (i = 0; i < 5010; i++)
-		for (j = 0; j < 5010; j++)
-			edges[i][j] = -1;
+	list<int>::iterator iter;
+	vector < pair<int, int> > cutEdges;
 	for (i = 0; i < 5010; i++)
 		for (j = 0; j < 5010; j++)
 			edges[i][j] = -1;
@@ -160,4 +192,12 @@ int main()
 			g.addEdge(x - 1, y - 1, z);
 	}
 	cout << g.result(0, n - 1) << '\n';
+	g.BFS(0);
+	for (int i = 0; i < n; i++)
+		if (g.reachable[i])
+			for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
+				if (!g.reachable[*iter])
+					cutEdges.push_back(make_pair(i, *iter));
+	for (int i = 0; i < cutEdges.size(); i++)
+		cout << cutEdges[i].first << ' ' << cutEdges[i].second << '\n';
 }
