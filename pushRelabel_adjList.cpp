@@ -190,11 +190,12 @@ int main()
 	}
 	cout << g.result(0, n - 1) << '\n';
 	g.BFS(0);
+	list<int>::iterator iter1;
 	for (int i = 0; i < n; i++)
 		if (g.reachable[i])
-			for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
-				if (!g.reachable[*iter])
-					g.cutEdges.push_back(make_pair(i, *iter));
+			for (iter1 = g.adj[i].begin(); iter1 != g.adj[i].end(); iter1++)
+				if (!g.reachable[*iter1])
+					g.cutEdges.push_back(make_pair(i, *iter1));
 	bool segmentation[n] = {false};
 	for (int i = 0; i < g.cutEdges.size(); i++){
 		// cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
