@@ -203,7 +203,7 @@ int main()
 	while (m--)
 	{
 		cin >> x >> y >> z;
-		if (x != y)
+		if (x != y && z)
 			g.addEdge(x - 1, y - 1, z);
 	}
 	cout << g.result(0, n - 1) << '\n';

@@ -2,7 +2,7 @@
 
 using namespace std;
 
-long long edges[5010][5010];
+long long edges[5001][5001];
 
 class Graph
 {
@@ -189,7 +189,9 @@ int main()
 	{
 		cin >> x >> y >> z;
 		if (x != y)
-			g.addEdge(x - 1, y - 1, z);
+			if(z){
+				g.addEdge(x - 1, y - 1, z);
+			}
 	}
 	cout << g.result(0, n - 1) << '\n';
 	g.BFS(0);
