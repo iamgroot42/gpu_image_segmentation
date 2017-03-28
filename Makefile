@@ -5,7 +5,7 @@ CPPFLAGS=-Wno-deprecated-declarations -I./devil/include
 LDFLAGS= -O2 -L./devil/lib -lm -lstdc++ -lIL -lILU
 
 all: 
-	g++ -o getWeights.out getWeights.cpp ${CPPFLAGS} ${LDFLAGS}
+	g++ -g -o getWeights.out getWeights.cpp ${CPPFLAGS} ${LDFLAGS}
 
 clean:
 	-rm -f getWeights.out
