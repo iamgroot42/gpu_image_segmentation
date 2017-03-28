@@ -47,9 +47,9 @@ int region_function(unsigned char* pixmap, int u, int v, bool is_foreground){
 	return 1;
 }
 
-void createWeights(unsigned char * pixmap, int** weights, int height, int width){
+void createWeights(unsigned char * pixmap, int** weights, int height, int width, 
+	set< pair<int,int> > hard_object, set< pair<int,int> > hard_background){
 	// V = P U {S(object),T(background)}
-	set< pair<int,int> > hard_object, hard_background;
 	bool foreground_map[height][width];
 	for (int i = 0; i < height ; i++){
 		for (int j = 0; j < width ; j++){
@@ -106,11 +106,29 @@ void createWeights(unsigned char * pixmap, int** weights, int height, int width)
 			}
 		}
 	}
-	printf("Woohoo\n");
+	printf("Weight calculation done\n");
 }
 
 
-int main(){
+void load_constraints(const char* filename, set<pair<int,int> > points){
+	ifstream input_stream(filename);
+	if (!input_stream) cerr << "Can't open input file!\n";
+	// one line
+	string line;
+	int x,y;
+	// extract all the text from the input file
+	while (getline(input_stream, line)) {
+		istringstream iss(line);
+		string sub;
+	   	iss >> sub;
+	   	x = stoi(sub);
+		iss >> sub;
+		y = stoi(sub);
+		points.insert(make_pair(x,y));
+	}
+}
+
+int main( int argc, char *argv[]){
 	int width, height;
 	unsigned char* pixmap;
 
@@ -123,12 +141,17 @@ int main(){
 		weights[i] = new int[n_nodes];
 	}
 
-	createWeights(pixmap, weights, height, width);
+	set<pair<int,int> > object, background;
+	load_constraints(argv[1], object);
+	load_constraints(argv[2], background);
 
-	for(int i=0;i<n_nodes;i++){
-		for(int j=0;j<n_nodes; j++){
-			printf("%d %d %d\n", i, j, weights[i][j]);
-		}
-	}
+	createWeights(pixmap, weights, height, width, object, background);
+
+	// for(int i=0;i<n_nodes;i++){
+	// 	for(int j=0;j<n_nodes; j++){
+	// 		printf("%d %d %d\n", i, j, weights[i][j]);
+	// 	}
+	// }
+
 	return 0;
 }
