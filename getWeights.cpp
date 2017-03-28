@@ -254,16 +254,8 @@ int main( int argc, char *argv[]){
 	// }
 
 	int n_edges=0;
+	
 	for(int i=0;i<n_nodes;i++){
-		for (iter = G.edges[i].begin(); iter != G.edges[i].end(); iter++)
-		{
-			y = *iter;
-			if (!reachable[y] && edges[x][y] > 0)
-			{
-				reachable[y] = true;
-				reachableVertices.push(y);
-			}
-		}
 		for(int j=0;j<n_nodes;j++){
 			if(weights[i][j]>0){
 				n_edges++;

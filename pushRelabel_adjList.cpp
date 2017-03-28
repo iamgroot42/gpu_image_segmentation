@@ -79,6 +79,7 @@ void Graph::BFS(int source)
 	}
 }
 
+
 void Graph::initializePreflow(int source)
 {
 	for (int i = 0; i < this -> V; i++)
@@ -188,14 +189,29 @@ int main()
 			g.addEdge(x - 1, y - 1, z);
 	}
 	cout << g.result(0, n - 1) << '\n';
-	// g.BFS(0);
-	// for (int i = 0; i < n; i++)
-	// 	if (g.reachable[i])
-	// 		for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
-	// 			if (!g.reachable[*iter])
-	// 				g.cutEdges.push_back(make_pair(i, *iter));
-	// for (int i = 0; i < g.cutEdges.size(); i++)
-	// 	cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
+	g.BFS(0);
+	for (int i = 0; i < n; i++)
+		if (g.reachable[i])
+			for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
+				if (!g.reachable[*iter])
+					g.cutEdges.push_back(make_pair(i, *iter));
+	bool segmentation[n] = {false};
+	for (int i = 0; i < g.cutEdges.size(); i++){
+		// cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
+		if(g.cutEdges[i].first == n-1 || g.cutEdges[i].second == n-1){
+			if(g.cutEdges[i].first == n-1){
+				segmentation[g.cutEdges[i].second] = true;
+			}
+			else{
+				segmentation[g.cutEdges[i].first] = true;	
+			}
+		}
+	}
+	cout<<"Segmentation vector:"<<endl;
+	for(int i=0;i<n;i++){
+		cout<<segmentation[i]<<" ";
+	}
+	cout<<endl;
 	// n = -1;
 	// int count = 1;
 	// while (n)
