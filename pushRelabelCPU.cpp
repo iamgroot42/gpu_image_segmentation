@@ -14,6 +14,7 @@ public:
 	long long *excess;
 	queue<int> activeVertices;
 	list<int> *adj;
+	vector < pair<int, int> > cutEdges;
 
 	Graph(int V);
 	void addEdge(int u, int v, long long capacity);
@@ -179,7 +180,6 @@ int main()
 {
 	int i, j, n, m, x, y, z;
 	list<int>::iterator iter;
-	vector < pair<int, int> > cutEdges;
 	for (i = 0; i < 5010; i++)
 		for (j = 0; j < 5010; j++)
 			edges[i][j] = -1;
@@ -197,7 +197,7 @@ int main()
 		if (g.reachable[i])
 			for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
 				if (!g.reachable[*iter])
-					cutEdges.push_back(make_pair(i, *iter));
-	for (int i = 0; i < cutEdges.size(); i++)
-		cout << cutEdges[i].first << ' ' << cutEdges[i].second << '\n';
+					g.cutEdges.push_back(make_pair(i, *iter));
+	for (int i = 0; i < g.cutEdges.size(); i++)
+		cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
 }
