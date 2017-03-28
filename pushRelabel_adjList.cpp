@@ -2,15 +2,8 @@
 
 using namespace std;
 
-struct Edge
-{
-	long long capacity;
-
-	Edge(long long capacity)
-	{
-		this -> capacity = capacity;
-	}
-};
+map <int, int> edges[5010];
+map <int, int>::iterator iter;
 
 class Graph
 {
@@ -20,7 +13,6 @@ public:
 	long long *excess;
 	queue<int> activeVertices;
 	list<int> *adj;
-	map <int, int> *edges;
 	vector < pair<int, int> > cutEdges;
 
 	Graph(int V);
@@ -41,7 +33,6 @@ Graph::Graph(int V)
 	this -> V = V;
 	label = new int[V];
 	labelCount = new int[2 * V];
-	edges = new map<int, int>[V];
 	excess = new long long[V];
 	active = new bool[V];
 	adj = new list<int> [V];
@@ -102,9 +93,9 @@ void Graph::initializePreflow(int source)
 	label[source] = this -> V;
 	labelCount[0] = this -> V - 1;
 	labelCount[this -> V] = 1;
-	for (int i = 0; i < this -> V; i++)
-		if (edges[source][i] >= 0)
-			excess[source] += edges[source][i];
+
+	for (iter = edges[source].begin(); iter != edges[source].end(); iter++)
+		excess[source] += edges[source][iter -> first];
 }
 
 void Graph::gap(int k)
@@ -124,24 +115,19 @@ void Graph::relabel(int u)
 {
 	labelCount[label[u]]--;
 	int minLabel = INT_MAX;
-	for (int i = 0; i < this -> V; i++)
-		if (edges[u].count(i) > 0)
-			if (edges[u][i] > 0)
-			{
-				minLabel = min(minLabel, label[i]);
-				label[u] = minLabel + 1;
-			}
+	for (iter = edges[u].begin(); iter != edges[u].end(); iter++)
+		if (edges[u][iter -> first] > 0)
+		{
+			minLabel = min(minLabel, label[iter -> first]);
+			label[u] = minLabel + 1;
+		}
 	labelCount[label[u]]++;
 	markActive(u);
 }
 
 void Graph::push(int u, int v)
 {
-	// cout << edges[u][v] << '\n';
-	// long long diff = min(excess[u], edges[u][v]);
-	long long diff = excess[u];
-	if (diff > (long long)edges[u][v])
-		diff = (long long)edges[u][v];
+	long long diff = min(excess[u], (long long)(edges[u][v]));
 	if (diff == 0 || label[u] <= label[v])
 		return;
 	excess[u] -= diff;
@@ -164,9 +150,8 @@ long long Graph::result(int source, int sink)
 {
 	long long maxFlow = 0;
 	initializePreflow(source);
-	for (int i = 0; i < this -> V; i++)
-		if (edges[source][i] >= 0)
-			push(source, i);
+	for (iter = edges[source].begin(); iter != edges[source].end(); iter++)
+		push(source, iter -> first);
 	while (!activeVertices.empty())
 	{
 		int u = activeVertices.front();
@@ -176,10 +161,10 @@ long long Graph::result(int source, int sink)
 		if (u == source || u == sink)
 			continue;
 
-		for (int i = 0; i < this -> V && excess[u] > 0; i++)
-			if (edges[u].count(i) > 0)
-				if (edges[u][i] > 0)
-					push(u, i);
+		for (iter = edges[u].begin(); iter != edges[u].end() && excess[u] > 0; iter++)
+			if (edges[u][iter -> first] > 0)
+				push(u, iter -> first);
+
 		if (excess[u] > 0)
 		{
 			if (labelCount[label[u]] == 1)
@@ -194,10 +179,6 @@ long long Graph::result(int source, int sink)
 int main()
 {
 	int i, j, n, m, x, y, z;
-	list<int>::iterator iter;
-	// for (i = 0; i < 5010; i++)
-	// 	for (j = 0; j < 5010; j++)
-	// 		edges[i][j] = -1;
 	cin >> n >> m;
 	Graph g(n);
 	while (m--)
@@ -215,4 +196,26 @@ int main()
 	// 				g.cutEdges.push_back(make_pair(i, *iter));
 	// for (int i = 0; i < g.cutEdges.size(); i++)
 	// 	cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
+	// n = -1;
+	// int count = 1;
+	// while (n)
+	// {
+	// 	cin >> n;
+	// 	if (!n)
+	// 		break;
+	// 	for (i = 0; i < 5010; i++)
+	// 		edges[i].clear();
+	// 	Graph g(n);
+	// 	int source, sink;
+	// 	cin >> source >> sink >> m;
+	// 	source--;
+	// 	sink--;
+	// 	while (m--)
+	// 	{
+	// 		cin >> x >> y >> z;
+	// 		g.addEdge(x - 1, y - 1, z);
+	// 	}
+	// 	cout << "Network " << count++ << '\n';
+	// 	cout << "The bandwidth is " << g.result(source, sink) << ".\n\n";
+	// }
 }
