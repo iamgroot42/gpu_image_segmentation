@@ -7,10 +7,8 @@ long long edges[5001][5001];
 class Graph
 {
 public:
-	bool *active;
-	bool *reachable;
-	int V;
-	int *labelCount, *label;
+	bool *active, *reachable;
+	int V, *labelCount, *label;
 	long long *excess;
 	queue<int> activeVertices;
 	list<int> *adj;
@@ -180,26 +178,24 @@ int main()
 {
 	int i, j, n, m, x, y, z;
 	list<int>::iterator iter;
-	for (i = 0; i < 5010; i++)
-		for (j = 0; j < 5010; j++)
+	for (i = 0; i < 5001; i++)
+		for (j = 0; j < 5001; j++)
 			edges[i][j] = -1;
 	cin >> n >> m;
 	Graph g(n);
 	while (m--)
 	{
 		cin >> x >> y >> z;
-		if (x != y)
-			if(z){
-				g.addEdge(x - 1, y - 1, z);
-			}
+		if (x != y && z > 0)
+			g.addEdge(x - 1, y - 1, z);
 	}
 	cout << g.result(0, n - 1) << '\n';
-	g.BFS(0);
-	for (int i = 0; i < n; i++)
-		if (g.reachable[i])
-			for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
-				if (!g.reachable[*iter])
-					g.cutEdges.push_back(make_pair(i, *iter));
-	for (int i = 0; i < g.cutEdges.size(); i++)
-		cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
+	// g.BFS(0);
+	// for (int i = 0; i < n; i++)
+	// 	if (g.reachable[i])
+	// 		for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
+	// 			if (!g.reachable[*iter])
+	// 				g.cutEdges.push_back(make_pair(i, *iter));
+	// for (int i = 0; i < g.cutEdges.size(); i++)
+	// 	cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
 }
