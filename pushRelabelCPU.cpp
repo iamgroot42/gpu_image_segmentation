@@ -5,13 +5,13 @@
 #include <queue>
 #include <map>
 
-#define FLATIMAGESIZE 316 * 300
+#define FLATIMAGESIZE 316 * 316
 
 using namespace std;
 
-map<int, long long > edges[FLATIMAGESIZE + 1];
-// long long edges[FLATIMAGESIZE + 1][FLATIMAGESIZE + 1];
-long long sourceEdges[FLATIMAGESIZE + 1], sinkEdges[FLATIMAGESIZE + 1];
+// map<int, long long > edges[FLATIMAGESIZE + 1];
+long long edges[FLATIMAGESIZE + 10][10];
+long long sourceEdges[FLATIMAGESIZE + 10], sinkEdges[FLATIMAGESIZE + 10];
 
 class Graph
 {
@@ -67,8 +67,8 @@ void Graph::addEdge(int u, int v, long long capacity, int source, int sink)
 	}
 	else
 	{
-		if (edges[u].find(v) == edges[u].end())
-		// if (edges[u][v] < 0)
+		// if (edges[u].find(v) == edges[u].end())
+		if (edges[u][v] < 0)
 			edges[u][v] = capacity;
 		else
 			edges[u][v] += capacity;
@@ -93,8 +93,10 @@ void Graph::BFS(int source, int sink)
 			if (!reachable[y])
 			{
 				if ( (x == source && sourceEdges[y] > 0) || (x == sink && sinkEdges[y] > 0) || (x != source && x != sink && edges[x][y] > 0))
-				reachable[y] = true;
-				reachableVertices.push(y);
+				{
+					reachable[y] = true;
+					reachableVertices.push(y);
+				}
 			}
 		}
 	}
@@ -147,15 +149,15 @@ void Graph::relabel(int u, int source, int sink)
 	int minLabel = INT_MAX;
 	for (int i = 0; i < this -> V; i++)
 	{
-		if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u].find(i) != edges[u].end()) )
-		// if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u][i] > 0) )
+		// if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u].find(i) != edges[u].end()) )
+		if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u][i] > 0) )
 		{
-			// minLabel = min(minLabel, label[i]);
-			// label[u] = minLabel + 1;
-			if(edges[u][i] > 0){
-				minLabel = min(minLabel, label[i]);
-				label[u] = minLabel + 1;
-			}
+			minLabel = min(minLabel, label[i]);
+			label[u] = minLabel + 1;
+			// if(edges[u][i] > 0){
+			// 	minLabel = min(minLabel, label[i]);
+			// 	label[u] = minLabel + 1;
+			// }
 		}
 	}
 	labelCount[label[u]]++;
@@ -208,8 +210,10 @@ long long Graph::result(int source, int sink)
 	for (int i = 0; i < this -> V; i++)
 		if (sourceEdges[i] >= 0)
 			push(source, i, source, sink);
+	long long count = 0;
 	while (!activeVertices.empty())
 	{
+		cout << count << ' ' << activeVertices.size() << '\n';
 		int u = activeVertices.front();
 		activeVertices.pop();
 		active[u] = false;
@@ -218,13 +222,13 @@ long long Graph::result(int source, int sink)
 			continue;
 
 		for (int i = 0; i < this -> V && excess[u] > 0; i++)
-			// if (edges[u][i] > 0)
-			// 	push(u, i, source, sink);
-			if (edges[u].find(i) != edges[u].end()){
-				if (edges[u][i] > 0){
-					push(u, i, source, sink);
-				}
-			}
+			if (edges[u][i] > 0)
+				push(u, i, source, sink);
+			// if (edges[u].find(i) != edges[u].end()){
+			// 	if (edges[u][i] > 0){
+			// 		push(u, i, source, sink);
+			// 	}
+			// }
 		if (excess[u] > 0)
 		{
 			if (labelCount[label[u]] == 1)
@@ -232,6 +236,7 @@ long long Graph::result(int source, int sink)
 			else
 				relabel(u, source, sink);
 		}
+		count++;
 	}
 	for (int i = 0; i < this -> V; i++)
 		if (sourceEdges[i] > 0)
@@ -247,8 +252,8 @@ int main()
 	{
 		sourceEdges[i] = -1;
 		sinkEdges[i] = -1;
-		// for (j = 0; j < 5001; j++)
-		// 	edges[i][j] = -1;
+		for (j = 0; j < 5001; j++)
+			edges[i][j] = -1;
 	}
 	cin >> n >> m;
 	Graph g(n);
@@ -262,12 +267,12 @@ int main()
 		}
 	}
 	cout << g.result(0, n - 1) << '\n';
-	// g.BFS(0, n - 1);
-	// for (int i = 0; i < n; i++)
-	// 	if (g.reachable[i])
-	// 		for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
-	// 			if (!g.reachable[*iter])
-	// 				g.cutEdges.push_back(make_pair(i, *iter));
-	// for (int i = 0; i < g.cutEdges.size(); i++)
-	// 	cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
+	g.BFS(0, n - 1);
+	for (int i = 0; i < n; i++)
+		if (g.reachable[i])
+			for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
+				if (!g.reachable[*iter])
+					g.cutEdges.push_back(make_pair(i, *iter));
+	for (int i = 0; i < g.cutEdges.size(); i++)
+		cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
 }
