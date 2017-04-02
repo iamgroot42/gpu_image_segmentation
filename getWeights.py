@@ -11,16 +11,18 @@ class Graph:
 
 	def __init__(self, V):
 		self.adjlist = {}
+		self.constraints = [] # -1: none, 0: object, 1: background
 		self.V = V
 		for i in range(V):
+			self.constraints.append(-1)
 			self.adjlist[i] = {}
 
 	def addEdge(self, u, v, cap):
-		if v in self.adjlist[u].keys():
+		if v in self.adjlist[u]:
 			self.adjlist[u][v] += cap
 		else:
 			self.adjlist[u][v] = cap
-		if u in self.adjlist[v].keys():
+		if u in self.adjlist[v]:
 			self.adjlist[v][u] += cap
 		else:
 			self.adjlist[v][u] = cap
@@ -39,10 +41,9 @@ def region_function(pixmap, u, v, region):
 	return 1 * (region == 'bkg')
 
 
-def createWeights(pixmap, height, width, hard_object, hard_background):
+def createWeights(pixmap, G, height, width):
 	# V = P U {S(object),T(background)}
-	n_nodes = (height*width) + 2;
-	G = Graph(n_nodes)
+	n_nodes = (height*width) + 2
 	K = 0
 	# {p,q} type edges
 	for i in range(1, height-1, 2):
@@ -63,46 +64,49 @@ def createWeights(pixmap, height, width, hard_object, hard_background):
 	for i in range(height):
 		for j in range(width):
 			u = (i * width) + j
-			if (u,0) in hard_object:
-				g,addEdge(u, 0, K)
-				g,addEdge(0, u, K)
-			elif (u,0) not in hard_background:
-				G.addEdge(u, 0, LAMBDA * region_function(pixmap, u, 0, 'bkg'))
-				G.addEdge(0, u, LAMBDA * region_function(pixmap, u, 0, 'bkg'))
+			if G.constraints[u] == 0:
+				G.addEdge(u, 0, K)
+				G.addEdge(0, u, K)
+			elif G.constraints[u] == -1:
+				weight = LAMBDA * region_function(pixmap, u, 0, 'bkg')
+				G.addEdge(u, 0, 3)
+				G.addEdge(0, u, 3)
 	# {p,T} type edges		
+	v = n_nodes - 1
 	for i in range(height):
 		for j in range(width):
 			u = (i * width) + j
-			v = n_nodes - 1
-			if (u,v) in hard_background:
+			if G.constraints[u] == 1:
 				G.addEdge(u, v, K)
 				G.addEdge(v, u, K)
-			elif (u,v) not in hard_object:
-				G.addEdge(u , v, LAMBDA * region_function(pixmap, u, v, 'obj'))
-				G.addEdge(v, u , LAMBDA * region_function(pixmap, u, v, 'obj'))
+			elif G.constraints[u] == -1:
+				weight = LAMBDA * region_function(pixmap, u, v, 'obj')
+				G.addEdge(u, v, weight)
+				G.addEdge(v, u, weight)
 	return G
 
 
-def load_constraints(filename):
+def load_constraints(filename, G, constraint_type, width):
 	f = open(filename, 'r')
-	points = set()
 
 	for line in f:
 		x, y = line.rstrip('\n').split(' ')
-		points.add((x,y))
-	return points
+		G.constraints[int(x) * width + int(y)] = constraint_type
 
 
 def main(image_name, object_name, background_name):
 	image = Image.open(image_name)
 	width, height = image.size
+	n_nodes = (height*width) + 2
 
 	image = np.array(image)
 
-	hard_object = load_constraints(object_name)
-	hard_background = load_constraints(background_name)
+	G = Graph(n_nodes)
+
+	load_constraints(object_name, G, 0, width)
+	load_constraints(background_name, G, 1, width)
 	
-	G = createWeights(image, height, width, hard_object, hard_background)
+	createWeights(image, G, height, width)
 
 	E = 0
 	for i in range(G.V):
