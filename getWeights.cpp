@@ -3,6 +3,8 @@
 #include <IL/ilu.h>
 
 #define LAMBDA 2
+#define SIGMA 1 
+#define B_PROPORTIONALITY 1
 
 using namespace std;
 
@@ -60,6 +62,7 @@ int background_function(unsigned char* pixmap, int u, int v){
 	return 2;
 	return (pixmap[u] - pixmap[v]) * (pixmap[u] - pixmap[v]);
 	int pr, pg, pb, qr, qg, qb, cost;
+	float norm, distance, floatcost;
 
 	pr = pixmap[u*4 + 0];
 	pg = pixmap[u*4 + 1];
@@ -69,7 +72,11 @@ int background_function(unsigned char* pixmap, int u, int v){
 	qg = pixmap[v*4 + 1];
 	qb = pixmap[v*4 + 2];
 
-	cost = (pr-qr)*(pr-qr) + (pg-qg)*(pg-qg) + (pb-qb)*(pb-qb);
+	norm = (pr-qr)*(pr-qr) + (pg-qg)*(pg-qg) + (pb-qb)*(pb-qb);
+	distance = (u-v)>0?(u-v):(v-u);
+	floatcost = (B_PROPORTIONALITY * exp(-norm/(2*SIGMA*SIGMA)))/distance;
+	cost = int(floatcost);
+	
 	return cost;
 }
 

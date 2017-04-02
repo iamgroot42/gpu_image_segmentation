@@ -3,11 +3,14 @@
 #include <list>
 #include <limits.h>
 #include <queue>
+#include <map>
+
+#define FLATIMAGESIZE 5000
 
 using namespace std;
 
-long long edges[5001][5001];
-long long sourceEdges[5001], sinkEdges[5001];
+map<int, long long > edges[FLATIMAGESIZE + 1];
+long long sourceEdges[FLATIMAGESIZE + 1], sinkEdges[FLATIMAGESIZE + 1];
 
 class Graph
 {
@@ -63,7 +66,7 @@ void Graph::addEdge(int u, int v, long long capacity, int source, int sink)
 	}
 	else
 	{
-		if (edges[u][v] < 0)
+		if (edges[u].find(v) == edges[u].end())
 			edges[u][v] = capacity;
 		else
 			edges[u][v] += capacity;
@@ -142,10 +145,12 @@ void Graph::relabel(int u, int source, int sink)
 	int minLabel = INT_MAX;
 	for (int i = 0; i < this -> V; i++)
 	{
-		if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u][i] > 0) )
+		if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u].find(i) != edges[u].end()) )
 		{
-			minLabel = min(minLabel, label[i]);
-			label[u] = minLabel + 1;
+			if(edges[u][i] > 0){
+				minLabel = min(minLabel, label[i]);
+				label[u] = minLabel + 1;
+			}
 		}
 	}
 	labelCount[label[u]]++;
@@ -208,8 +213,11 @@ long long Graph::result(int source, int sink)
 			continue;
 
 		for (int i = 0; i < this -> V && excess[u] > 0; i++)
-			if (edges[u][i] > 0)
-				push(u, i, source, sink);
+			if (edges[u].find(i) != edges[u].end()){
+				if (edges[u][i] > 0){
+					push(u, i, source, sink);
+				}
+			}
 		if (excess[u] > 0)
 		{
 			if (labelCount[label[u]] == 1)
@@ -228,12 +236,10 @@ int main()
 {
 	int i, j, n, m, x, y, z;
 	list<int>::iterator iter;
-	for (i = 0; i < 5001; i++)
+	for (i = 0; i < FLATIMAGESIZE + 1; i++)
 	{
 		sourceEdges[i] = -1;
 		sinkEdges[i] = -1;
-		for (j = 0; j < 5001; j++)
-			edges[i][j] = -1;
 	}
 	cin >> n >> m;
 	Graph g(n);
