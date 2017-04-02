@@ -5,11 +5,12 @@
 #include <queue>
 #include <map>
 
-#define FLATIMAGESIZE 5000
+#define FLATIMAGESIZE 316 * 300
 
 using namespace std;
 
 map<int, long long > edges[FLATIMAGESIZE + 1];
+// long long edges[FLATIMAGESIZE + 1][FLATIMAGESIZE + 1];
 long long sourceEdges[FLATIMAGESIZE + 1], sinkEdges[FLATIMAGESIZE + 1];
 
 class Graph
@@ -67,6 +68,7 @@ void Graph::addEdge(int u, int v, long long capacity, int source, int sink)
 	else
 	{
 		if (edges[u].find(v) == edges[u].end())
+		// if (edges[u][v] < 0)
 			edges[u][v] = capacity;
 		else
 			edges[u][v] += capacity;
@@ -146,7 +148,10 @@ void Graph::relabel(int u, int source, int sink)
 	for (int i = 0; i < this -> V; i++)
 	{
 		if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u].find(i) != edges[u].end()) )
+		// if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u][i] > 0) )
 		{
+			// minLabel = min(minLabel, label[i]);
+			// label[u] = minLabel + 1;
 			if(edges[u][i] > 0){
 				minLabel = min(minLabel, label[i]);
 				label[u] = minLabel + 1;
@@ -213,6 +218,8 @@ long long Graph::result(int source, int sink)
 			continue;
 
 		for (int i = 0; i < this -> V && excess[u] > 0; i++)
+			// if (edges[u][i] > 0)
+			// 	push(u, i, source, sink);
 			if (edges[u].find(i) != edges[u].end()){
 				if (edges[u][i] > 0){
 					push(u, i, source, sink);
@@ -240,6 +247,8 @@ int main()
 	{
 		sourceEdges[i] = -1;
 		sinkEdges[i] = -1;
+		// for (j = 0; j < 5001; j++)
+		// 	edges[i][j] = -1;
 	}
 	cin >> n >> m;
 	Graph g(n);
