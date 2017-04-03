@@ -263,16 +263,17 @@ int main()
 		if (x != y && z > 0)
 		{
 			g.addEdge(x - 1, y - 1, z, 0, n - 1);
-			g.addEdge(y - 1, x - 1, z, 0, n - 1);
+			// g.addEdge(y - 1, x - 1, z, 0, n - 1);
 		}
 	}
-	cout << g.result(0, n - 1) << '\n';
+	// cout << g.result(0, n - 1) << '\n';
+	g.result(0, n - 1);
 	g.BFS(0, n - 1);
 	for (int i = 0; i < n; i++)
 		if (g.reachable[i])
 			for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
 				if (!g.reachable[*iter])
-					g.cutEdges.push_back(make_pair(i, *iter));
+					g.cutEdges.push_back(make_pair(i+1, (*iter)+1));
 	for (int i = 0; i < g.cutEdges.size(); i++)
 		cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
 }

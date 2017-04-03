@@ -34,11 +34,11 @@ def background_function(pixmap, u, v):
 	norm = np.linalg.norm(pixmap[u_x][u_y] - pixmap[v_x][v_y]) ** 2
 	distance = np.linalg.norm(np.array(u) - np.array(v))
 	cost = B_PROPORTIONALITY * np.exp( - norm / (2 * SIGMA * SIGMA)) / distance
-	return int(cost)
+	return int(cost)+1
 
 
-def region_function(pixmap, u, v, region):
-	return 1 * (region == 'bkg')
+def region_function(pixmap, u, region):
+	return 1 + (region == 'bkg')
 
 
 def createWeights(pixmap, G, height, width):
@@ -46,65 +46,62 @@ def createWeights(pixmap, G, height, width):
 	n_nodes = (height*width) + 2
 	K = 0
 	# {p,q} type edges
-	for i in range(1, height-1, 2):
-		for j in range(1, width-1, 2):
+	for i in range(width):
+		for j in range(height):
 			internal_sum = 0 
 			for k in range(-1,2):
 				for l in range(-1,2):
 					if k or l:
-						B_uv = background_function(pixmap, (i,j), (i+k, j+l))
-						internal_sum += B_uv
-						u = i * width + j
-						v = (i + k) * width + (j + l)
-						G.addEdge(u, v , B_uv)
-						G.addEdge(v, u , B_uv)
+						u = i * height + j
+						v = (i + k) * height + (j + l)
+						if (i+k) >= 0 and (i+k) < width and (j+l) >=0 and (j+l) < height:
+							B_uv = background_function(pixmap, (i,j), (i+k, j+l))
+							internal_sum += B_uv
+							G.addEdge(u+1, v+1 , B_uv)
 			K = max(internal_sum ,K)
 	K += 1
 	# {p,S} type edges
-	for i in range(height):
-		for j in range(width):
-			u = (i * width) + j
+	for i in range(width):
+		for j in range(height):
+			u = (i * height) + j
 			if G.constraints[u] == 0:
 				G.addEdge(u, 0, K)
-				G.addEdge(0, u, K)
 			elif G.constraints[u] == -1:
-				weight = LAMBDA * region_function(pixmap, u, 0, 'bkg')
-				G.addEdge(u, 0, 3)
-				G.addEdge(0, u, 3)
+				weight = LAMBDA * region_function(pixmap, u, 'bkg')
+				G.addEdge(u+1, 0, weight)
 	# {p,T} type edges		
 	v = n_nodes - 1
-	for i in range(height):
-		for j in range(width):
-			u = (i * width) + j
+	for i in range(width):
+		for j in range(height):
+			u = (i * height) + j
 			if G.constraints[u] == 1:
-				G.addEdge(u, v, K)
-				G.addEdge(v, u, K)
+				G.addEdge(u+1, v, K)
 			elif G.constraints[u] == -1:
-				weight = LAMBDA * region_function(pixmap, u, v, 'obj')
-				G.addEdge(u, v, weight)
-				G.addEdge(v, u, weight)
+				weight = LAMBDA * region_function(pixmap, u, 'obj')
+				G.addEdge(u+1, v, weight)
 	return G
 
 
-def load_constraints(filename, G, constraint_type, width):
+def load_constraints(filename, G, constraint_type, height):
 	f = open(filename, 'r')
 
 	for line in f:
 		x, y = line.rstrip('\n').split(' ')
-		G.constraints[int(x) * width + int(y)] = constraint_type
+		G.constraints[int(y) * height + int(x)] = constraint_type
 
 
 def main(image_name, object_name, background_name):
-	image = Image.open(image_name)
-	width, height = image.size
-	n_nodes = (height*width) + 2
+	image = np.array(Image.open(image_name))
+	width, height = image.shape[:2]
+
+	n_nodes = (width*height) + 2
 
 	image = np.array(image)
 
 	G = Graph(n_nodes)
 
-	load_constraints(object_name, G, 0, width)
-	load_constraints(background_name, G, 1, width)
+	load_constraints(object_name, G, 0, height)
+	load_constraints(background_name, G, 1, height)
 	
 	createWeights(image, G, height, width)
 
