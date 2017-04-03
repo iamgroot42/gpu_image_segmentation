@@ -5,12 +5,12 @@
 #include <queue>
 #include <map>
 
-#define FLATIMAGESIZE 316 * 316
+#define FLATIMAGESIZE 316 * 300
 
 using namespace std;
 
-// map<int, long long > edges[FLATIMAGESIZE + 1];
-long long edges[FLATIMAGESIZE + 10][10];
+map <int, long long> edges[FLATIMAGESIZE + 10];
+// long long edges[FLATIMAGESIZE + 10][10];
 long long sourceEdges[FLATIMAGESIZE + 10], sinkEdges[FLATIMAGESIZE + 10];
 
 class Graph
@@ -67,8 +67,8 @@ void Graph::addEdge(int u, int v, long long capacity, int source, int sink)
 	}
 	else
 	{
-		// if (edges[u].find(v) == edges[u].end())
-		if (edges[u][v] < 0)
+		if (edges[u].count(v) == 0)
+		// if (edges[u][v] < 0)
 			edges[u][v] = capacity;
 		else
 			edges[u][v] += capacity;
@@ -146,20 +146,16 @@ void Graph::gap(int k)
 void Graph::relabel(int u, int source, int sink)
 {
 	labelCount[label[u]]--;
-	int minLabel = INT_MAX;
-	for (int i = 0; i < this -> V; i++)
-	{
-		// if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u].find(i) != edges[u].end()) )
-		if ( (u == source && sourceEdges[i] > 0) || (u == sink && sinkEdges[i] > 0) || (u != source && u != sink && edges[u][i] > 0) )
+	int i, minLabel = INT_MAX;
+	map <int, long long>::iterator iter;
+
+	// Source and sink are never relabeled.
+	for (iter = edges[u].begin(); iter != edges[u].end(); iter++)
+		if (iter -> second > 0)
 		{
-			minLabel = min(minLabel, label[i]);
+			minLabel = min(minLabel, label[iter -> first]);
 			label[u] = minLabel + 1;
-			// if(edges[u][i] > 0){
-			// 	minLabel = min(minLabel, label[i]);
-			// 	label[u] = minLabel + 1;
-			// }
 		}
-	}
 	labelCount[label[u]]++;
 	markActive(u);
 }
@@ -167,12 +163,16 @@ void Graph::relabel(int u, int source, int sink)
 void Graph::push(int u, int v, int source, int sink)
 {
 	long long diff = excess[u];
+
 	if (u == source && sourceEdges[v] > 0)
 		diff = min(diff, sourceEdges[v]);
+
 	else if (u == sink && sinkEdges[v] > 0)
 		diff = min(diff, sinkEdges[v]);
+
 	else if (u != source && u != sink && edges[u][v] > 0)
 		diff = min(diff, edges[u][v]);
+
 	if (diff == 0 || label[u] <= label[v])
 		return;
 
@@ -206,6 +206,7 @@ void Graph::push(int u, int v, int source, int sink)
 long long Graph::result(int source, int sink)
 {
 	long long maxFlow = 0;
+	map <int, long long>::iterator iter;
 	initializePreflow(source);
 	for (int i = 0; i < this -> V; i++)
 		if (sourceEdges[i] >= 0)
@@ -221,14 +222,10 @@ long long Graph::result(int source, int sink)
 		if (u == source || u == sink)
 			continue;
 
-		for (int i = 0; i < this -> V && excess[u] > 0; i++)
-			if (edges[u][i] > 0)
-				push(u, i, source, sink);
-			// if (edges[u].find(i) != edges[u].end()){
-			// 	if (edges[u][i] > 0){
-			// 		push(u, i, source, sink);
-			// 	}
-			// }
+		for (iter = edges[u].begin(); iter != edges[u].end() && excess[u] > 0; iter++)
+			if (iter -> second > 0)
+				push(u, iter -> first, source, sink);
+
 		if (excess[u] > 0)
 		{
 			if (labelCount[label[u]] == 1)
@@ -248,12 +245,10 @@ int main()
 {
 	int i, j, n, m, x, y, z;
 	list<int>::iterator iter;
-	for (i = 0; i < FLATIMAGESIZE + 1; i++)
+	for (i = 0; i < FLATIMAGESIZE + 10; i++)
 	{
 		sourceEdges[i] = -1;
 		sinkEdges[i] = -1;
-		for (j = 0; j < 5001; j++)
-			edges[i][j] = -1;
 	}
 	cin >> n >> m;
 	Graph g(n);
@@ -261,10 +256,7 @@ int main()
 	{
 		cin >> x >> y >> z;
 		if (x != y && z > 0)
-		{
 			g.addEdge(x - 1, y - 1, z, 0, n - 1);
-			// g.addEdge(y - 1, x - 1, z, 0, n - 1);
-		}
 	}
 	// cout << g.result(0, n - 1) << '\n';
 	g.result(0, n - 1);
@@ -273,7 +265,7 @@ int main()
 		if (g.reachable[i])
 			for (iter = g.adj[i].begin(); iter != g.adj[i].end(); iter++)
 				if (!g.reachable[*iter])
-					g.cutEdges.push_back(make_pair(i+1, (*iter)+1));
+					g.cutEdges.push_back(make_pair(i, (*iter)));
 	for (int i = 0; i < g.cutEdges.size(); i++)
 		cout << g.cutEdges[i].first << ' ' << g.cutEdges[i].second << '\n';
 }
