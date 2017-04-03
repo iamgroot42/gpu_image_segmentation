@@ -213,7 +213,7 @@ long long Graph::result(int source, int sink)
 	long long count = 0;
 	while (!activeVertices.empty())
 	{
-		cout << count << ' ' << activeVertices.size() << '\n';
+		// cout << count << ' ' << activeVertices.size() << '\n';
 		int u = activeVertices.front();
 		activeVertices.pop();
 		active[u] = false;
