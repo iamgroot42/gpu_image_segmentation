@@ -1,10 +1,8 @@
-
 #include <algorithm>
 #include <iostream>
 #include <list>
 #include <limits.h>
 #include <queue>
-#include <map>
 
 #define FLATIMAGESIZE 316 * 300
 #define N 256
@@ -15,8 +13,8 @@ using namespace std;
 struct Edge
 {
 	int v;
-	long long capacity;
-	Edge(int v = -1, long long capacity = -1)
+	unsigned long long int capacity;
+	Edge(int v = -1, unsigned long long int capacity = LLONG_MAX)
 	{
 		this -> v = v;
 		this -> capacity = capacity;
@@ -26,27 +24,21 @@ struct Edge
 class Graph
 {
 public:
-	int *sourceEdges, *sinkEdges;
+	unsigned long long int *sourceEdges, *sinkEdges;
+	Edge *edges;
+
 	list<int> *adj;
 	bool *active, *reachable;
 	int *labelCount, *label;
-	long long *excess;
+	unsigned long long int *excess;
 	queue<int> activeVertices;
 
 	int source, sink, V;
 
 	Graph(int V);
 	void setTerminals(int source, int sink);
-	void addEdge(int u, int v, long long capacity);
-	void BFS();
-
+	void addEdge(int u, int v, unsigned long long int capacity);
 	void initializePreflow();
-	void markActive(int u);
-	void relabel(int u);
-	void push(int u, int v);
-	void gap(int k);
-
-	long long result();
 };
 
 Graph::Graph(int V)
@@ -54,10 +46,20 @@ Graph::Graph(int V)
 	this -> V = V;
 	label = new int[V];
 	labelCount = new int[2 * V];
-	excess = new long long[V];
+	excess = new unsigned long long int[V];
 	active = new bool[V];
 	reachable = new bool[V];
 	adj = new list<int>[V];
+
+	sourceEdges = new unsigned long long int[N * M];
+	sinkEdges = new unsigned long long int[N * M];
+	edges = new Edge[N * M * 10];
+
+	for (int i = 0; i < N * M; i++)
+	{
+		sourceEdges[i] = LLONG_MAX;
+		sinkEdges[i] = LLONG_MAX;
+	}
 }
 
 void Graph::setTerminals(int source, int sink)
@@ -66,23 +68,23 @@ void Graph::setTerminals(int source, int sink)
 	this -> sink = sink;
 }
 
-void Graph::addEdge(int u, int v, long long capacity)
+void Graph::addEdge(int u, int v, unsigned long long int capacity)
 {
 	adj[u].push_back(v);
 
 	if (u == this -> source)
 	{
-		if (sourceEdges[v] < 0)
-			sourceEdges[v] = capacity;
+		if (this -> sourceEdges[v] == LLONG_MAX)
+			this -> sourceEdges[v] = capacity;
 		else
-			sourceEdges[v] += capacity;
+			this -> sourceEdges[v] += capacity;
 	}
 	else if (u == this -> sink)
 	{
-		if (sinkEdges[v] < 0)
-			sinkEdges[v] = capacity;
+		if (this -> sinkEdges[v] == LLONG_MAX)
+			this -> sinkEdges[v] = capacity;
 		else
-			sinkEdges[v] += capacity;
+			this -> sinkEdges[v] += capacity;
 	}
 	else
 	{
@@ -90,51 +92,22 @@ void Graph::addEdge(int u, int v, long long capacity)
 		int pos = -1;
 		for (int i = 0; i < 10; i++)
 		{
-			if (edges[u][i].v == v)
+			if (this -> edges[u * M + i].v == v)
 			{
 				flag = true;
-				edges[u][i].capacity += capacity;
+				this -> edges[u * M + i].capacity += capacity;
 			}
-			else if (edges[u][i].capacity == -1)
+			else if (this -> edges[u * M + i].capacity == LLONG_MAX)
 				pos = i;
 		}
 
 		if (!flag)
 		{
-			edges[u][pos].v = v;
-			edges[u][pos].capacity = capacity;
+			this -> edges[u * M + pos].v = v;
+			this -> edges[u * M + pos].capacity = capacity;
 		}
-		// if (edges[u].count(v) == 0)
-		// 	edges[u][v] = capacity;
-		// else
-		// 	edges[u][v] += capacity;
 	}
 }
-
-// void Graph::BFS()
-// {
-// 	queue<int> neighbours;
-// 	list<int>::iterator iter;
-// 	reachable[this -> sink] = true;
-// 	neighbours.push(this -> sink);
-
-// 	while (!neighbours.empty())
-// 	{
-// 		int x = neighbours.front(), y;
-// 		neighbours.pop();
-
-// 		for (iter = adj[x].begin(); iter != adj[x].end(); iter++)
-// 		{
-// 			y = *iter;
-// 			if (!reachable[y] && y != this -> source)
-// 				if ( (x == sink && sinkEdges[y] > 0) || (x != source && x != sink && edges[x][y] > 0) )
-// 				{
-// 					reachable[y] = true;
-// 					neighbours.push(y);
-// 				}
-// 		}
-// 	}
-// }
 
 void Graph::initializePreflow()
 {
@@ -150,188 +123,107 @@ void Graph::initializePreflow()
 	labelCount[0] = this -> V - 1;
 	labelCount[this -> V] = 1;
 	for (int i = 0; i < this -> V; i++)
-		if (sourceEdges[i] >= 0)
-			excess[this -> source] += sourceEdges[i];
+		if (this -> sourceEdges[i] < LLONG_MAX)
+			excess[this -> source] += this -> sourceEdges[i];
 }
 
-void Graph::markActive(int u)
+__global__ void pushKernel(Graph *g)
 {
-	if (!active[u] && excess[u] > 0)
-	{
-		active[u] = true;
-		activeVertices.push(u);
-	}
-}
+	// __shared__ unsigned long long int label[M * N];
+	// __shared__ unsigned long long int excess[M * N];
 
-void Graph::gap(int k)
-{
-	for (int i = 0; i < this -> V; i++)
-	{
-		if (label[i] < k)
-			continue;
-		labelCount[label[i]]--;
-		label[i] = max(label[i], this -> V + 1);
-		labelCount[label[i]]++;
-		markActive(i);
-	}
-}
-
-void Graph::relabel(int u)
-{
-	labelCount[label[u]]--;
-	int i, minLabel = INT_MAX;
-	// map <int, long long>::iterator iter;
-
-	// Source and sink are never relabeled.
-	for (i = 0; i < 10; i++)
-		if (edges[u][i].capacity > 0)
-		{
-			minLabel = min(minLabel, label[edges[u][i].v]);
-			label[u] = minLabel + 1;
-		}
-	// for (iter = edges[u].begin(); iter != edges[u].end(); iter++)
-	// 	if (iter -> second > 0)
-	// 	{
-	// 		minLabel = min(minLabel, label[iter -> first]);
-	// 		label[u] = minLabel + 1;
-	// 	}
-	labelCount[label[u]]++;
-	markActive(u);
-}
-
-void Graph::push(int u, int v)
-{
-	long long diff = excess[u];
-	int i, pos = -1;
-
-	if (u == this -> source && sourceEdges[v] > 0)
-		diff = min(diff, sourceEdges[v]);
-
-	else if (u == this -> sink && sinkEdges[v] > 0)
-		diff = min(diff, sinkEdges[v]);
-
-	// else if (u != this -> source && u != this -> sink && edges[u][v] > 0)
-	// 	diff = min(diff, edges[u][v]);
-	else if (u != this -> source && u != this -> sink)
-		for (i = 0; i < 10; i++)
-			if (edges[u][i].v == v)
-			{
-				pos = i;
-				diff = min(diff, edges[u][i].capacity);
-			}
-
-	if (diff == 0 || label[u] <= label[v])
-		return;
-
-	excess[u] -= diff;
-	excess[v] += diff;
-
-	if (u == this -> source)
-	{
-		sourceEdges[v] -= diff;
-		if (v == this -> sink)
-			sinkEdges[u] += diff;
-		else
-			for (i = 0; i < 10; i++)
-				if (edges[v][i].v == v)
-					edges[v][i].capacity += diff;
-	}
-	else if (u == this -> sink)
-	{
-		sinkEdges[v] -= diff;
-		if (v == this -> source)
-			sourceEdges[v] += diff;
-		else
-			for (i = 0; i < 10; i++)
-				if (edges[v][i].v == v)
-					edges[v][i].capacity += diff;
-	}
-	else
-	{
-		edges[u][pos].capacity -= diff;
-		if (v == this -> source)
-			sourceEdges[u] += diff;
-		else if (v == this -> sink)
-			sinkEdges[u] += diff;
-		else
-			for (i = 0; i < 10; i++)
-				if (edges[v][i].v == v)
-					edges[v][i].capacity += diff;
-	}
-	markActive(v);
-}
-
-long long Graph::result()
-{
-	long long maxFlow = 0;
-	map <int, long long>::iterator iter;
-
-	initializePreflow();
-	for (int i = 0; i < this -> V; i++)
-		if (sourceEdges[i] >= 0)
-			push(this -> source, i);
-	long long count = 0;
-	while (!activeVertices.empty())
-	{
-		int u = activeVertices.front();
-		activeVertices.pop();
-		active[u] = false;
-
-		if (u == source || u == sink)
-			continue;
-
-		// for (iter = edges[u].begin(); iter != edges[u].end() && excess[u] > 0; iter++)
-		// 	if (iter -> second > 0)
-		// 		push(u, iter -> first);
-		for (int i = 0; i < 10; i++)
-			if (edges[u][i].capacity > 0)
-				push(u, edges[u][i].v);
-
-		if (excess[u] > 0)
-		{
-			if (labelCount[label[u]] == 1)
-				gap(label[u]);
-			else
-				relabel(u);
-		}
-		count++;
-	}
-	return maxFlow = excess[sink];
-}
-
-__global__ void pushKernel(long long *globalExcess, long long *globalLabels)
-{
-	__shared__ long long labels[M * N];
-	__shared__ long long excess[M * N];
-	int neighbours[10];
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockDim.y * blockIdx.y;
-	
-	long long label = -1, excess = -1;
-	if (i < N && j < M)
-	{
-		labels[i * M + j] = globalLabels[i * M + j];
-		excess[i * M + j] = globalExcess[i * M + j];
-	}
-	__syncthreads();
+	int u = i * M + j;
 
-	
+	// if (i < N && j < M)
+	// {
+	// 	label[u] = globalLabels[u];
+	// 	excess[u] = globalExcesses[u];
+	// }
+	// __syncthreads();
+
+	unsigned long long int label = g -> label[u], excess = g -> excess[u], capacity = 0, diff = 0;
+	if (u == g -> source)
+		for (int v = 0; v < N * M; v++)
+			if (g -> label[v] < label)
+			{
+				capacity = g -> sourceEdges[v];
+				diff = min(excess, capacity);
+				capacity -= diff;
+				if (v == g -> sink)
+					atomicAdd(&g -> sinkEdges[u], diff);
+				else
+					for (int l = 0; l < 10; l++)
+						if (g -> edges[v * M + l].v == u)
+							atomicAdd(&g -> edges[v * M + l].capacity, diff);
+				g -> sourceEdges[v] = capacity;
+			}
+	else if (u == g -> sink)
+		for (int v = 0; v < N * M; v++)
+			if (g -> label[v] < label)
+			{
+				capacity = g -> sinkEdges[v];
+				diff = min(excess, capacity);
+				capacity -= diff;
+				if (v == g -> source)
+					atomicAdd(&g -> sourceEdges[u], diff);
+				else
+					for (int l = 0; l < 10; l++)
+						if (g -> edges[v * M + l].v == u)
+							atomicAdd(&g -> edges[v * M + l].capacity, diff);
+				g -> sinkEdges[v] = capacity;
+			}
+	else
+		for (int l = 0; l < 10; l++)
+		{
+			int v = g -> edges[u * M + l].v;
+			if (g -> label[v] < label)
+			{
+				capacity = g -> edges[u * M + l].capacity;
+				diff = min(excess, capacity);
+				capacity -= diff;
+				if (v == g -> source)
+					atomicAdd(&g -> sourceEdges[u], diff);
+				if (v == g -> sink)
+					atomicAdd(&g -> sinkEdges[u], diff);
+				else
+					for (int m = 0; m < 10; m++)
+						if (g -> edges[v * M + m].v == u)
+							atomicAdd(&g -> edges[v * M + m].capacity, diff);
+				g -> edges[u * M + l].capacity = capacity;
+			}
+		}
 }
 
-__global__ void pullKernel(int u);
-__global__ void localRelabel(int u);
+__global__ void localRelabel(Graph *g)
+{
+	int i = threadIdx.x + blockIdx.x * blockDim.x;
+	int j = threadIdx.y + blockDim.y * blockIdx.y;
+	int u = i * M + j, v, l;
+
+	bool label = g -> label[u];
+	unsigned long long int minLabel = LLONG_MAX;
+
+	for (l = 0; l < 10; l++)
+		if (g -> edges[u * M + l].capacity != LLONG_MAX)
+		{
+			v = g -> edges[u * M + l].v;
+			if (minLabel > g -> label[v])
+			{
+				minLabel = g -> label[v];
+				label = minLabel + 1;
+			}
+		}
+	g -> label[u] = label;
+}
+
 __global__ void globalRelabel(int u); 
 
 int main()
 {
-	int i, j, n, m, x, y, z;
-	list<int>::iterator iter;
-	map<int, long long>::iterator iter1;
-	for (i = 0; i < FLATIMAGESIZE + 10; i++)
-	{
-		sourceEdges[i] = -1;
-		sinkEdges[i] = -1;
-	}
+	int n, m, x, y;
+	unsigned long long int z;
 	cin >> n >> m;
 	Graph g(n);
 	g.setTerminals(0, n - 1);
@@ -341,13 +233,5 @@ int main()
 		if (x != y && z > 0)
 			g.addEdge(x - 1, y - 1, z);
 	}
-	// cout << g.result() << '\n';
-	// g.result();
-	// for (i = 1; i < n - 1; i++)
-	// 	for (iter1 = edges[i].begin(); iter1 != edges[i].end(); iter1++)
-	// 		if (iter1 -> second == 0 &&  iter1 -> first != 0 && iter1 -> first != n - 1)
-	// 		{
-	// 			cout << i << ' ' << iter1 -> first /*<< ' ' << iter1 -> second << '\n';
-	// 			cout << sourceEdges[iter1-> first] << ' ' << sinkEdges[iter1 -> first]*/ << '\n';
-	// 		}
+	g.initializePreflow();
 }
