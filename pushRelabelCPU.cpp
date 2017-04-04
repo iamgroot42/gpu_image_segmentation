@@ -9,8 +9,20 @@
 
 using namespace std;
 
-map <int, long long> edges[FLATIMAGESIZE + 10];
+struct Edge
+{
+	int v;
+	long long capacity;
+	Edge(int v = -1, long long capacity = -1)
+	{
+		this -> v = v;
+		this -> capacity = capacity;
+	}
+};
+
+// map <int, long long> edges[FLATIMAGESIZE + 10];
 long long sourceEdges[FLATIMAGESIZE + 10], sinkEdges[FLATIMAGESIZE + 10];
+Edge edges[FLATIMAGESIZE + 10][10];
 
 class Graph
 {
@@ -74,38 +86,55 @@ void Graph::addEdge(int u, int v, long long capacity)
 	}
 	else
 	{
-		if (edges[u].count(v) == 0)
-		// if (edges[u][v] < 0)
-			edges[u][v] = capacity;
-		else
-			edges[u][v] += capacity;
-	}
-}
-
-void Graph::BFS()
-{
-	queue<int> neighbours;
-	list<int>::iterator iter;
-	reachable[this -> sink] = true;
-	neighbours.push(this -> sink);
-
-	while (!neighbours.empty())
-	{
-		int x = neighbours.front(), y;
-		neighbours.pop();
-
-		for (iter = adj[x].begin(); iter != adj[x].end(); iter++)
+		bool flag = false;
+		int pos = -1;
+		for (int i = 0; i < 10; i++)
 		{
-			y = *iter;
-			if (!reachable[y] && y != this -> source)
-				if ( (x == sink && sinkEdges[y] > 0) || (x != source && x != sink && edges[x][y] > 0) )
-				{
-					reachable[y] = true;
-					neighbours.push(y);
-				}
+			if (edges[u][i].v == v)
+			{
+				flag = true;
+				edges[u][i].capacity += capacity;
+			}
+			else if (edges[u][i].capacity == -1)
+				pos = i;
 		}
+
+		if (!flag)
+		{
+			edges[u][pos].v = v;
+			edges[u][pos].capacity = capacity;
+		}
+		// if (edges[u].count(v) == 0)
+		// 	edges[u][v] = capacity;
+		// else
+		// 	edges[u][v] += capacity;
 	}
 }
+
+// void Graph::BFS()
+// {
+// 	queue<int> neighbours;
+// 	list<int>::iterator iter;
+// 	reachable[this -> sink] = true;
+// 	neighbours.push(this -> sink);
+
+// 	while (!neighbours.empty())
+// 	{
+// 		int x = neighbours.front(), y;
+// 		neighbours.pop();
+
+// 		for (iter = adj[x].begin(); iter != adj[x].end(); iter++)
+// 		{
+// 			y = *iter;
+// 			if (!reachable[y] && y != this -> source)
+// 				if ( (x == sink && sinkEdges[y] > 0) || (x != source && x != sink && edges[x][y] > 0) )
+// 				{
+// 					reachable[y] = true;
+// 					neighbours.push(y);
+// 				}
+// 		}
+// 	}
+// }
 
 void Graph::initializePreflow()
 {
@@ -151,15 +180,21 @@ void Graph::relabel(int u)
 {
 	labelCount[label[u]]--;
 	int i, minLabel = INT_MAX;
-	map <int, long long>::iterator iter;
+	// map <int, long long>::iterator iter;
 
 	// Source and sink are never relabeled.
-	for (iter = edges[u].begin(); iter != edges[u].end(); iter++)
-		if (iter -> second > 0)
+	for (i = 0; i < 10; i++)
+		if (edges[u][i].capacity > 0)
 		{
-			minLabel = min(minLabel, label[iter -> first]);
+			minLabel = min(minLabel, label[edges[u][i].v]);
 			label[u] = minLabel + 1;
 		}
+	// for (iter = edges[u].begin(); iter != edges[u].end(); iter++)
+	// 	if (iter -> second > 0)
+	// 	{
+	// 		minLabel = min(minLabel, label[iter -> first]);
+	// 		label[u] = minLabel + 1;
+	// 	}
 	labelCount[label[u]]++;
 	markActive(u);
 }
@@ -167,6 +202,7 @@ void Graph::relabel(int u)
 void Graph::push(int u, int v)
 {
 	long long diff = excess[u];
+	int i, pos = -1;
 
 	if (u == this -> source && sourceEdges[v] > 0)
 		diff = min(diff, sourceEdges[v]);
@@ -174,8 +210,15 @@ void Graph::push(int u, int v)
 	else if (u == this -> sink && sinkEdges[v] > 0)
 		diff = min(diff, sinkEdges[v]);
 
-	else if (u != this -> source && u != this -> sink && edges[u][v] > 0)
-		diff = min(diff, edges[u][v]);
+	// else if (u != this -> source && u != this -> sink && edges[u][v] > 0)
+	// 	diff = min(diff, edges[u][v]);
+	else if (u != this -> source && u != this -> sink)
+		for (i = 0; i < 10; i++)
+			if (edges[u][i].v == v)
+			{
+				pos = i;
+				diff = min(diff, edges[u][i].capacity);
+			}
 
 	if (diff == 0 || label[u] <= label[v])
 		return;
@@ -189,7 +232,9 @@ void Graph::push(int u, int v)
 		if (v == this -> sink)
 			sinkEdges[u] += diff;
 		else
-			edges[v][u] += diff;
+			for (i = 0; i < 10; i++)
+				if (edges[v][i].v == v)
+					edges[v][i].capacity += diff;
 	}
 	else if (u == this -> sink)
 	{
@@ -197,17 +242,21 @@ void Graph::push(int u, int v)
 		if (v == this -> source)
 			sourceEdges[v] += diff;
 		else
-			edges[v][u] += diff;
+			for (i = 0; i < 10; i++)
+				if (edges[v][i].v == v)
+					edges[v][i].capacity += diff;
 	}
 	else
 	{
-		edges[u][v] -= diff;
+		edges[u][pos].capacity -= diff;
 		if (v == this -> source)
 			sourceEdges[u] += diff;
 		else if (v == this -> sink)
 			sinkEdges[u] += diff;
 		else
-			edges[v][u] += diff;
+			for (i = 0; i < 10; i++)
+				if (edges[v][i].v == v)
+					edges[v][i].capacity += diff;
 	}
 	markActive(v);
 }
@@ -231,9 +280,12 @@ long long Graph::result()
 		if (u == source || u == sink)
 			continue;
 
-		for (iter = edges[u].begin(); iter != edges[u].end() && excess[u] > 0; iter++)
-			if (iter -> second > 0)
-				push(u, iter -> first);
+		// for (iter = edges[u].begin(); iter != edges[u].end() && excess[u] > 0; iter++)
+		// 	if (iter -> second > 0)
+		// 		push(u, iter -> first);
+		for (int i = 0; i < 10; i++)
+			if (edges[u][i].capacity > 0)
+				push(u, edges[u][i].v);
 
 		if (excess[u] > 0)
 		{
@@ -267,12 +319,12 @@ int main()
 			g.addEdge(x - 1, y - 1, z);
 	}
 	// cout << g.result() << '\n';
-	g.result();
-	for (i = 1; i < n - 1; i++)
-		for (iter1 = edges[i].begin(); iter1 != edges[i].end(); iter1++)
-			if (iter1 -> second == 0 &&  iter1 -> first != 0 && iter1 -> first != n - 1)
-			{
-				cout << i << ' ' << iter1 -> first /*<< ' ' << iter1 -> second << '\n';
-				cout << sourceEdges[iter1-> first] << ' ' << sinkEdges[iter1 -> first]*/ << '\n';
-			}
+	// g.result();
+	// for (i = 1; i < n - 1; i++)
+	// 	for (iter1 = edges[i].begin(); iter1 != edges[i].end(); iter1++)
+	// 		if (iter1 -> second == 0 &&  iter1 -> first != 0 && iter1 -> first != n - 1)
+	// 		{
+	// 			cout << i << ' ' << iter1 -> first /*<< ' ' << iter1 -> second << '\n';
+	// 			cout << sourceEdges[iter1-> first] << ' ' << sinkEdges[iter1 -> first]*/ << '\n';
+	// 		}
 }
