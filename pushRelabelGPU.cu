@@ -277,5 +277,12 @@ int main()
 	dim3 numBlocks(16, 16);
 	dim3 threadsPerBlock(M / 16, N / 16);
 
+	printf("PUSHHHH!\n");
 	pushKernel<<<numBlocks, threadsPerBlock>>>(g_gpu);
+	printf("huuraayyy\n");
+	localRelabel<<<numBlocks, threadsPerBlock>>>(g_gpu);
+	printf("bokololololkokoolpokloiklokloiklokloiklolk\n");
+	globalRelabel<<<numBlocks, threadsPerBlock>>>(g_gpu, 1);
+	printf("bottle diyo\n");
+
 }
