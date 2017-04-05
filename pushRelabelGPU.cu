@@ -1,8 +1,4 @@
-#include <algorithm>
-#include <iostream>
-#include <list>
-#include <limits.h>
-#include <queue>
+#include <bits/stdc++.h>
 
 #define FLATIMAGESIZE 316 * 300
 #define N 256
@@ -137,7 +133,7 @@ __global__ void pushKernel(Graph *g)
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockDim.y * blockIdx.y;
 	int u = i * M + j;
-
+	printf("HUI\n");
 	// if (i < N && j < M)
 	// {
 	// 	label[u] = globalLabels[u];
@@ -146,6 +142,7 @@ __global__ void pushKernel(Graph *g)
 	// __syncthreads();
 
 	unsigned long long int label = g -> label[u], excess = g -> excess[u], capacity = 0, diff = 0;
+	printf("HUI1\n");
 	if (u == g -> source)
 		for (int v = 0; v < N * M; v++)
 			if (g -> label[v] < label)
@@ -260,10 +257,11 @@ __global__ void globalRelabel(Graph *g, int k)
 
 int main()
 {
-	int n, m, x, y;
+	int  m, x, y;
 	unsigned long long int z;
 	Graph *g = new Graph(N * M);
 	g -> setTerminals(0, N * M - 1);
+	m = 5;
 	while (m--)
 	{
 		cin >> x >> y >> z;
@@ -271,12 +269,13 @@ int main()
 			g -> addEdge(x - 1, y - 1, z);
 	}
 	g -> initializePreflow();
-
+	printf("initflow ho gaya\n");
 	Graph *g_gpu;
-	cudaMalloc((void**)&g_gpu, sizeof(Graph));
-	cudaMemcpy(g_gpu, &g, sizeof(Graph), cudaMemcpyHostToDevice);
+	assert(cudaSuccess == cudaMalloc((void**)&g_gpu, sizeof(Graph)));
+	assert(cudaSuccess == cudaMemcpy(g_gpu, g, sizeof(Graph), cudaMemcpyHostToDevice));
+	printf("haye rabaaaaaa\n");
 	dim3 numBlocks(16, 16);
-	dim3 threadsPerBlock(M, N);
+	dim3 threadsPerBlock(M / 16, N / 16);
 
 	pushKernel<<<numBlocks, threadsPerBlock>>>(g_gpu);
 }
