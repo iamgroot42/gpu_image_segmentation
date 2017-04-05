@@ -24,13 +24,13 @@ struct Edge
 class Graph
 {
 public:
-	unsigned long long int *sourceEdges, *sinkEdges;
-	Edge *edges;
+	unsigned long long int sourceEdges[N * M], sinkEdges[N * M];
+	Edge edges[N * M * 10];
 
-	list<int> *adj;
-	bool *active, *reachable;
-	int *labelCount, *label;
-	unsigned long long int *excess;
+	list<int> adj[N * M];
+	bool active[N * M], reachable[N * M];
+	int labelCount[N * M], label[N * M];
+	unsigned long long int excess[N * M];
 	queue<int> activeVertices;
 
 	int source, sink, V;
@@ -43,17 +43,19 @@ public:
 
 Graph::Graph(int V)
 {
+	cout << "CHAKKAYYYYYYYYYYYYYYYY\n";
 	this -> V = V;
-	label = new int[V];
-	labelCount = new int[2 * V];
-	excess = new unsigned long long int[V];
-	active = new bool[V];
-	reachable = new bool[V];
-	adj = new list<int>[V];
+	cout << "HERE\n";
+	// label = new int[V];
+	// labelCount = new int[2 * V];
+	// excess = new unsigned long long int[V];
+	// active = new bool[V];
+	// reachable = new bool[V];
+	// adj = new list<int>[V];
 
-	sourceEdges = new unsigned long long int[N * M];
-	sinkEdges = new unsigned long long int[N * M];
-	edges = new Edge[N * M * 10];
+	// sourceEdges = new unsigned long long int[N * M];
+	// sinkEdges = new unsigned long long int[N * M];
+	// edges = new Edge[N * M * 10];
 
 	for (int i = 0; i < N * M; i++)
 	{
@@ -155,8 +157,8 @@ __global__ void pushKernel(Graph *g)
 					atomicAdd(&g -> sinkEdges[u], diff);
 				else
 					for (int l = 0; l < 10; l++)
-						if (g -> edges[v * M + l].v == u)
-							atomicAdd(&g -> edges[v * M + l].capacity, diff);
+						if (g -> edges[v * 10 + l].v == u)
+							atomicAdd(&g -> edges[v * 10 + l].capacity, diff);
 				g -> sourceEdges[v] = capacity;
 			}
 	else if (u == g -> sink)
@@ -170,17 +172,17 @@ __global__ void pushKernel(Graph *g)
 					atomicAdd(&g -> sourceEdges[u], diff);
 				else
 					for (int l = 0; l < 10; l++)
-						if (g -> edges[v * M + l].v == u)
-							atomicAdd(&g -> edges[v * M + l].capacity, diff);
+						if (g -> edges[v * 10 + l].v == u)
+							atomicAdd(&g -> edges[v * 10 + l].capacity, diff);
 				g -> sinkEdges[v] = capacity;
 			}
 	else
 		for (int l = 0; l < 10; l++)
 		{
-			int v = g -> edges[u * M + l].v;
+			int v = g -> edges[u * 10 + l].v;
 			if (g -> label[v] < label)
 			{
-				capacity = g -> edges[u * M + l].capacity;
+				capacity = g -> edges[u * 10 + l].capacity;
 				diff = min(excess, capacity);
 				capacity -= diff;
 				if (v == g -> source)
@@ -189,9 +191,9 @@ __global__ void pushKernel(Graph *g)
 					atomicAdd(&g -> sinkEdges[u], diff);
 				else
 					for (int m = 0; m < 10; m++)
-						if (g -> edges[v * M + m].v == u)
-							atomicAdd(&g -> edges[v * M + m].capacity, diff);
-				g -> edges[u * M + l].capacity = capacity;
+						if (g -> edges[v * 10 + m].v == u)
+							atomicAdd(&g -> edges[v * 10 + m].capacity, diff);
+				g -> edges[u * 10 + l].capacity = capacity;
 			}
 		}
 }
@@ -206,9 +208,9 @@ __global__ void localRelabel(Graph *g)
 	unsigned long long int minLabel = LLONG_MAX;
 
 	for (l = 0; l < 10; l++)
-		if (g -> edges[u * M + l].capacity != LLONG_MAX)
+		if (g -> edges[u * 10 + l].capacity != LLONG_MAX)
 		{
-			v = g -> edges[u * M + l].v;
+			v = g -> edges[u * 10 + l].v;
 			if (minLabel > g -> label[v])
 			{
 				minLabel = g -> label[v];
@@ -218,20 +220,63 @@ __global__ void localRelabel(Graph *g)
 	g -> label[u] = label;
 }
 
-__global__ void globalRelabel(int u); 
+__global__ void globalRelabel(Graph *g, int k)
+{
+	int i = threadIdx.x + blockIdx.x * blockDim.x;
+	int j = threadIdx.y + blockIdx.y * blockDim.y;
+
+	int u = i * M + j, l;
+	if (k == 1)
+	{
+		if (g -> sinkEdges[u] > 0)
+			g -> label[u] = 1;
+		__syncthreads();
+		return;
+	}
+
+	unsigned long long int label = g -> label[u];
+	if (label == LLONG_MAX)
+	{
+		if (u == g -> source || u == g -> sink)
+			for (l = 0; l < M * N; l++)
+				if (g -> label[l] == k)
+				{
+					label = k + 1;
+					break;
+				}
+		else
+		{
+			for (l = 0; l < 10; l++)
+				if (g -> label[u * 10 + l] == k)
+				{
+					label = k + 1;
+					break;
+				}
+		}
+	}
+	g -> label[u] = label;
+	__syncthreads();
+}
 
 int main()
 {
 	int n, m, x, y;
 	unsigned long long int z;
-	cin >> n >> m;
-	Graph g(n);
-	g.setTerminals(0, n - 1);
+	Graph *g = new Graph(N * M);
+	g -> setTerminals(0, N * M - 1);
 	while (m--)
 	{
 		cin >> x >> y >> z;
 		if (x != y && z > 0)
-			g.addEdge(x - 1, y - 1, z);
+			g -> addEdge(x - 1, y - 1, z);
 	}
-	g.initializePreflow();
+	g -> initializePreflow();
+
+	Graph *g_gpu;
+	cudaMalloc((void**)&g_gpu, sizeof(Graph));
+	cudaMemcpy(g_gpu, &g, sizeof(Graph), cudaMemcpyHostToDevice);
+	dim3 numBlocks(16, 16);
+	dim3 threadsPerBlock(M, N);
+
+	pushKernel<<<numBlocks, threadsPerBlock>>>(g_gpu);
 }
