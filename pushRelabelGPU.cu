@@ -125,7 +125,7 @@ void Graph::initializePreflow()
 			excess[this -> source] += this -> sourceEdges[i];
 }
 
-__global__ void pushKernel(Graph *g)
+__global__ void pushKernel(Graph *g, bool* convergence_flag)
 {
 	// __shared__ unsigned long long int label[M * N];
 	// __shared__ unsigned long long int excess[M * N];
@@ -258,6 +258,7 @@ __global__ void globalRelabel(Graph *g, int k)
 int main()
 {
 	int  m, x, y;
+	bool* convergence_flag = new bool;
 	unsigned long long int z;
 	Graph *g = new Graph(N * M);
 	g -> setTerminals(0, N * M - 1);
@@ -277,12 +278,20 @@ int main()
 	dim3 numBlocks(16, 16);
 	dim3 threadsPerBlock(M / 16, N / 16);
 
-	printf("PUSHHHH!\n");
-	pushKernel<<<numBlocks, threadsPerBlock>>>(g_gpu);
-	printf("huuraayyy\n");
-	localRelabel<<<numBlocks, threadsPerBlock>>>(g_gpu);
-	printf("bokololololkokoolpokloiklokloiklokloiklolk\n");
-	globalRelabel<<<numBlocks, threadsPerBlock>>>(g_gpu, 1);
+	*convergence_flag = false;
+	int paraMeter = 5, paraKeter = 5;
+	while(!*convergence_flag){
+		for(int i=0;i<paraMeter;i++){
+			printf("PUSHHHH!\n");
+			pushKernel<<<numBlocks, threadsPerBlock>>>(g_gpu, convergence_flag);
+		}
+		for(int i=0;i<paraKeter;i++){
+			printf("huuraayyy\n");
+			localRelabel<<<numBlocks, threadsPerBlock>>>(g_gpu);
+		}
+		printf("bokololololkokoolpokloiklokloiklokloiklolk\n");
+		globalRelabel<<<numBlocks, threadsPerBlock>>>(g_gpu, 1);
+	}
 	printf("bottle diyo\n");
 
 }
