@@ -1,4 +1,4 @@
-GPPFLAGS=-I./devil/include
+GPPFLAGS=-I./devil/include  --gpu-architecture=compute_35
 LDFLAGS= -O2 -lm -lstdc++ -lIL -lILU
 
 
