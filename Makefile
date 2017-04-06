@@ -1,5 +1,5 @@
-GPPFLAGS=-I./devil/include  --gpu-architecture=compute_35
-LDFLAGS= -O2 -lm -lstdc++ -lIL -lILU
+GPPFLAGS = -I./devil/include  --gpu-architecture=compute_35 -L ./devil/lib
+LDFLAGS =  -O2 -lm -lstdc++ -lIL -lILU
 
 
 all:
