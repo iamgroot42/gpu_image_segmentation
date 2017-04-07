@@ -7,11 +7,7 @@
 #define HYPERk 4
 #define LAMBDA 2
 
-
 using namespace std;
-
-// Global temporary storage F
-// __unified__ unsigned long long int** F;
 
 __device__ unsigned long long B_function(int x, int y){
 	return (x - y) * (x - y);
@@ -28,13 +24,24 @@ __device__  unsigned long long R_function(int x, int y){
 struct Pixel{
 	int pixel_value, hard_constraint, height;
 	unsigned long long neighbor_capacities[10]; //Stored in row major form, followed by source and sink
-	unsigned long long int  excess;
+	unsigned long long int excess;
 	bool is_active;
 	Pixel(){
 		this -> hard_constraint = 0;
 		this -> height = 0;
 		this -> excess = 0;
 		this -> is_active = false;
+	}
+};
+
+struct Terminal{
+	unsigned long long int excess;
+	bool is_active;
+	int height;
+	Terminal(){
+		this -> is_active = false;
+		this -> height = 0;
+		this -> excess = 0;
 	}
 };
 
@@ -74,8 +81,8 @@ __global__ void push(Pixel *image_graph, unsigned long long *F, int height, int 
 		__shared__ int block_flag ;
 		block_flag = 0;
 		
-		shared_heights[locali][localj] = image_graph[i * width + j].height;
-		shared_excess[locali][localj] = image_graph[i * width + j].excess;
+		shared_heights[locali + 1][localj + 1] = image_graph[i * width + j].height;
+		shared_excess[locali + 1][localj + 1] = image_graph[i * width + j].excess;
 
 		//Boundary pixels of grid
 		if(locali == 0){
@@ -386,7 +393,8 @@ int main(int argc, char* argv[]){
 	unsigned char *image, *cuda_image;
 	unsigned long long *K_gpu, *F_gpu;
 	Pixel *image_graph, *cuda_image_graph;
-
+	Terminal *source, *sink, *cuda_source, *cuda_sink;
+	
 	ilInit();
 
 	ILuint image_id = loadImage(argv[1], &image, width, height);
@@ -395,17 +403,27 @@ int main(int argc, char* argv[]){
 
 	//Pixel graph with padding to avoid convergence in kernels for boundary pixels
 	image_graph = (Pixel*)malloc(pixel_memsize);
-	
+	source = new Terminal;
+	sink = new Terminal;	
+
 	cudaMalloc((void**)&F_gpu, (width + 1) * (height + 1) * sizeof(unsigned long long));
 	cudaMalloc((void**)&convergence_flag_gpu, sizeof(int));
 	cudaMalloc((void**)&cuda_image_graph, pixel_memsize);
 	cudaMalloc((void**)&cuda_image, width * height * sizeof(unsigned char));
 	cudaMalloc((void**)&cuda_image_graph, pixel_memsize);
 	cudaMalloc((void**)&K_gpu, sizeof(unsigned long long));
+	cudaMalloc((void**)&cuda_source, sizeof(Terminal));
+	cudaMalloc((void**)&cuda_sink, sizeof(Terminal));
+	
+	//Set properties of source and sink nodes
+
 	cudaMemcpy(cuda_image_graph, image_graph, pixel_memsize, cudaMemcpyHostToDevice);
 	cudaMemcpy(cuda_image, image, width * height * sizeof(unsigned char), cudaMemcpyHostToDevice);
 	cudaMemcpy(K_gpu, K, sizeof(unsigned long long), cudaMemcpyHostToDevice);
 	cudaMemcpy(convergence_flag_gpu, convergence_flag, sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(cuda_source, source, sizeof(Terminal), cudaMemcpyHostToDevice);
+        cudaMemcpy(cuda_sink, sink, sizeof(Terminal), cudaMemcpyHostToDevice);
+
 
 	dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 numBlocks(height / BLOCK_SIZE + 1, width / BLOCK_SIZE + 1);
