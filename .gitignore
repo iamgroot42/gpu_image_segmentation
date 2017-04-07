@@ -13,3 +13,4 @@ GRAPH
 MASK
 *.jpeg
 *.png
+test_images/*
