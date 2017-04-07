@@ -86,13 +86,13 @@ __global__ void push(Pixel *image_graph, unsigned long long *F, int height, int 
 				shared_heights[0][BLOCK_SIZE + 1] = image_graph[(i - 1) * width + (j + 1)].height;
 			}
 		}
-		else if(localj == BLOCK_SIZE - 1){
+		else if(locali == BLOCK_SIZE - 1){
 			shared_excess[BLOCK_SIZE + 1][localj + 1] = image_graph[(i + 1) * width + j].excess;
 			shared_heights[BLOCK_SIZE + 1][localj + 1] = image_graph[(i + 1) * width + j].height;
 			if(localj == 0){
 				shared_excess[BLOCK_SIZE + 1][0] = image_graph[(i + 1) * width + (j - 1)].excess;
 				shared_heights[BLOCK_SIZE + 1][BLOCK_SIZE + 1] = image_graph[(i + 1) * width + (j + 1)].height;
-			}	
+			}
 		}
 		else if(localj == 0){
 			shared_excess[locali + 1][0] = image_graph[i * width + (j - 1)].excess;
@@ -115,9 +115,9 @@ __global__ void push(Pixel *image_graph, unsigned long long *F, int height, int 
 		for(int l = 0; l < 8; l++){
 			dest_x = (locali + 1) + x_offsets[l];
 			dest_y = (localj + 1) + y_offsets[l];
-			if(shared_heights[dest_x][dest_y] + 1 == shared_heights[localj][localj]){
-				shared_excess[dest_x][dest_y] += shared_excess[locali][localj]; //push e(u) to eligible neighbors
-				thread_flag = 0;
+			if(shared_heights[dest_x][dest_y] + 1 == shared_heights[locali + 1][localj + 1]){
+				shared_excess[dest_x][dest_y] += shared_excess[locali + 1][localj + 1]; //push e(u) to eligible neighbors
+				thread_flag = 1;
 			}
 		}
 
@@ -134,6 +134,7 @@ __global__ void push(Pixel *image_graph, unsigned long long *F, int height, int 
 		if(threadIdx.x == 0 && threadIdx.y == 0){
 			atomicOr(convergence_flag, block_flag);
 		}
+		printf("%d ", *convergence_flag);
 	}
 }
 
@@ -184,7 +185,7 @@ __global__ void localRelabel(Pixel *image_graph, int height, int width){
 				shared_heights[0][BLOCK_SIZE + 1] = image_graph[(i - 1) * width + (j + 1)].height;
 			}
 		}
-		else if(localj == BLOCK_SIZE - 1){
+		else if(locali == BLOCK_SIZE - 1){
 				shared_heights[BLOCK_SIZE + 1][localj + 1] = image_graph[(i + 1) * width + j].height;
 			if(localj == 0){
 				shared_heights[BLOCK_SIZE + 1][BLOCK_SIZE + 1] = image_graph[(i + 1) * width + (j + 1)].height;
@@ -217,7 +218,7 @@ __global__ void localRelabel(Pixel *image_graph, int height, int width){
 
 		// Run same condition as above for source, sink
 
-		image_graph[i * width + j].height = min_height;
+		image_graph[i * width + j].height = min_height + 1;
 	}
 }
 
@@ -248,7 +249,7 @@ __global__ void globalRelabel(Pixel *image_graph, int height, int width, int ite
 					shared_heights[0][BLOCK_SIZE + 1] = image_graph[(i - 1) * width + (j + 1)].height;
 				}
 			}
-			else if(localj == BLOCK_SIZE - 1){
+			else if(locali == BLOCK_SIZE - 1){
 				shared_heights[BLOCK_SIZE + 1][localj + 1] = image_graph[(i + 1) * width + j].height;
 				if(localj == 0){
 					shared_heights[BLOCK_SIZE + 1][BLOCK_SIZE + 1] = image_graph[(i + 1) * width + (j + 1)].height;
@@ -398,34 +399,28 @@ int main(int argc, char* argv[]){
 	cudaMalloc((void**)&F_gpu, (width + 1) * (height + 1) * sizeof(unsigned long long));
 	cudaMalloc((void**)&convergence_flag_gpu, sizeof(int));
 	cudaMalloc((void**)&cuda_image_graph, pixel_memsize);
-	// printf("Error: %s\n", cudaGetErrorString(cudaGetLastError()));
 	cudaMalloc((void**)&cuda_image, width * height * sizeof(unsigned char));
-	// printf("Error: %s\n", cudaGetErrorString(cudaGetLastError()));
 	cudaMalloc((void**)&cuda_image_graph, pixel_memsize);
-	// printf("Error: %s\n", cudaGetErrorString(cudaGetLastError()));
 	cudaMalloc((void**)&K_gpu, sizeof(unsigned long long));
 	cudaMemcpy(cuda_image_graph, image_graph, pixel_memsize, cudaMemcpyHostToDevice);
-	// printf("Error: %s\n", cudaGetErrorString(cudaGetLastError()));
 	cudaMemcpy(cuda_image, image, width * height * sizeof(unsigned char), cudaMemcpyHostToDevice);
-	// printf("Error: %s\n", cudaGetErrorString(cudaGetLastError()));
 	cudaMemcpy(K_gpu, K, sizeof(unsigned long long), cudaMemcpyHostToDevice);
-	// printf("Error: %s\n", cudaGetErrorString(cudaGetLastError()));
+	cudaMemcpy(convergence_flag_gpu, convergence_flag, sizeof(int), cudaMemcpyHostToDevice);
 
 	dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 numBlocks(height / BLOCK_SIZE + 1, width / BLOCK_SIZE + 1);
 
 	// Load weights in graph using kernel call/host loops
 	initNeighbors<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, cuda_image, height, width, K_gpu);
-	// printf("Error: %s\n", cudaGetErrorString(cudaGetLastError()));
-	// assert(cudaSuccess == cudaGetLastError());
+	assert(cudaSuccess == cudaGetLastError());
 	printf("Initialized spatial weight values\n");
 	initConstraints<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, height, width, *K);
-	// assert(cudaSuccess == cudaGetLastError());
+	assert(cudaSuccess == cudaGetLastError());
 	printf("Initialized terminal weight values\n");
 
 	int iteration = 1;
-	while(!(*convergence_flag)){
-		for(int i = 0; i< HYPERk; i++){
+	while((*convergence_flag) || (!(*convergence_flag && iteration == 1))){
+		for(int i = 0; i < HYPERk; i++){
 			for(int j = 0; j < HYPERm; j++){
 				push<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, F_gpu, height, width, convergence_flag_gpu);
 				assert(cudaSuccess == cudaGetLastError());
@@ -433,6 +428,8 @@ int main(int argc, char* argv[]){
 				pull<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, F_gpu, height, width);
 				assert(cudaSuccess == cudaGetLastError());
 				printf("Local pull operation\n");
+				cudaMemcpy(convergence_flag, convergence_flag_gpu, sizeof(int), cudaMemcpyDeviceToHost);
+				printf("%d\n", *convergence_flag);
 			}
 			localRelabel<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, height, width);
 			assert(cudaSuccess == cudaGetLastError());
@@ -442,7 +439,7 @@ int main(int argc, char* argv[]){
 		assert(cudaSuccess == cudaGetLastError());
 		printf("Global relabel operation\n");
 		iteration++;
-		printf("Completed iteration\n\n");
+		printf("Completed iteration %d\n\n", iteration);
 	}
 
 	printf("Done with algorithm\n");
