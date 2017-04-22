@@ -3,8 +3,8 @@ LDFLAGS =  -O2 -lm -lstdc++ -lIL -lILU
 
 
 all:
-	g++ pushRelabelCPU.cpp -o pushRelabel.out -g
-	nvcc imageFlow.cu ${GPPFLAGS} ${LDFLAGS} -g -G
+	g++ temp2.cpp -o pushRelabel.out -g
+	# nvcc imageFlow.cu ${GPPFLAGS} ${LDFLAGS} -g -G
 
 clean:
-	rm -f *.out graph OBJECT BACKGROUND GRAPH MASK
+	rm -f *.out 

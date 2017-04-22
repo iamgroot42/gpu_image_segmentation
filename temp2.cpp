@@ -7,8 +7,8 @@ using namespace std;
 struct Edge
 {
 	int v;
-	long long capacity, flow;
-	Edge(int v = -1, long long capacity = -1, long long flow = -1)
+	float capacity, flow;
+	Edge(int v = -1.0, float capacity = -1.0, float flow = -1.0)
 	{
 		this -> v = v;
 		this -> capacity = capacity;
@@ -25,14 +25,14 @@ public:
 	list<int> *adj;
 	bool *active, *reachable;
 	int *labelCount, *label;
-	long long *excess;
+	float *excess;
 	queue<int> activeVertices;
 
 	int source, sink, V;
 
 	Graph(int V);
 	void setTerminals(int source, int sink);
-	void addEdge(int u, int v, long long capacity);
+	void addEdge(int u, int v, float capacity);
 	void BFS();
 
 	void initializePreflow();
@@ -41,10 +41,10 @@ public:
 	void push(int u, int v);
 	void gap(int k);
 
-	long long result();
+	float result();
 };
 
-void addEdgeAux(int u, int v, long long capacity, vector <Edge> &edgeSet)
+void addEdgeAux(int u, int v, float capacity, vector <Edge> &edgeSet)
 {
 	bool flag = false;
 	for (int i = 0; i < edgeSet.size(); i++)
@@ -55,10 +55,10 @@ void addEdgeAux(int u, int v, long long capacity, vector <Edge> &edgeSet)
 			break;
 		}
 	if (!flag)
-		edgeSet.push_back(Edge(v, capacity, 0));
+		edgeSet.push_back(Edge(v, capacity, 0.0));
 }
 
-void pushAux1(long long *diff, int *pos, int v, vector <Edge> &edgeSet)
+void pushAux1(float *diff, int *pos, int v, vector <Edge> &edgeSet)
 {
 	int i;
 	for (i = 0; i < edgeSet.size(); i++)
@@ -73,9 +73,9 @@ bool BFSAux(int y, vector<Edge> & edgeSet)
 {
 	bool flag = true;
 	for (int i = 0; i < edgeSet.size(); i++)
-		if (edgeSet[i].v == y && edgeSet[i].capacity > edgeSet[i].flow && edgeSet[i].flow > 0)
+		if (edgeSet[i].v == y && edgeSet[i].capacity > edgeSet[i].flow && edgeSet[i].flow > 0.0)
 		{
-			cout << edgeSet[i].capacity << ' ' <<  edgeSet[i].flow << '\n';
+			// cout << edgeSet[i].capacity << ' ' <<  edgeSet[i].flow << '\n';
 			flag = true;
 		}
 	return flag;
@@ -86,7 +86,7 @@ Graph::Graph(int V)
 	this -> V = V;
 	label = new int[V];
 	labelCount = new int[2 * V];
-	excess = new long long[V];
+	excess = new float[V];
 	active = new bool[V];
 	reachable = new bool[V];
 	adj = new list<int>[V];
@@ -98,7 +98,7 @@ void Graph::setTerminals(int source, int sink)
 	this -> sink = sink;
 }
 
-void Graph::addEdge(int u, int v, long long capacity)
+void Graph::addEdge(int u, int v, float capacity)
 {
 	adj[u].push_back(v);
 
@@ -114,11 +114,11 @@ void Graph::addEdge(int u, int v, long long capacity)
 				edges[u][i].capacity += capacity;
 				break;
 			}
-			else if (edges[u][i].capacity == -1)
+			else if (edges[u][i].capacity == -1.0)
 			{
 				edges[u][i].v = v;
 				edges[u][i].capacity = capacity;
-				edges[u][i].flow = 0;
+				edges[u][i].flow = 0.0;
 				break;
 			}
 		}
@@ -146,7 +146,7 @@ void Graph::BFS()
 					}
 				else if (x != this -> source && x != this -> sink)
 					for (i = 0; i < maxNeighbours; i++)
-						if (edges[x][i].v == y && edges[x][i].capacity > edges[x][i].flow && edges[x][i].flow > 0)
+						if (edges[x][i].v == y && edges[x][i].capacity > edges[x][i].flow && edges[x][i].flow > 0.0)
 						{
 							reachable[y] = true;
 							neighbours.push(y);
@@ -161,7 +161,7 @@ void Graph::initializePreflow()
 	for (int i = 0; i < this -> V; i++)
 	{
 		active[i] = false;
-		excess[i] = 0;
+		excess[i] = 0.0;
 		label[i] = 0;
 		labelCount[2 * i] = 0;
 		labelCount[2 * i + 1] = 0;
@@ -176,7 +176,7 @@ void Graph::initializePreflow()
 
 void Graph::markActive(int u)
 {
-	if (!active[u] && excess[u] > 0)
+	if (!active[u] && excess[u] > 0.0)
 	{
 		active[u] = true;
 		activeVertices.push(u);
@@ -205,7 +205,7 @@ void Graph::relabel(int u)
 	for (i = 0; i < maxNeighbours; i++)
 		if (edges[u][i].capacity > edges[u][i].flow)
 		{
-			assert(edges[u][i].capacity > 0);
+			assert(edges[u][i].capacity > 0.0);
 			minLabel = min(minLabel, label[edges[u][i].v]);
 			label[u] = minLabel + 1;
 		}
@@ -215,8 +215,8 @@ void Graph::relabel(int u)
 
 void Graph::push(int u, int v)
 {
-	long long diff = excess[u];
-	int i, pos = -1;
+	float diff = excess[u];
+	int i, pos = -1.0;
 
 	if (u == this -> source)
 		pushAux1(&diff, &pos, v, sourceEdges);
@@ -272,9 +272,9 @@ void Graph::push(int u, int v)
 	markActive(v);
 }
 
-long long Graph::result()
+float Graph::result()
 {
-	long long maxFlow = 0;
+	float maxFlow = 0;
 
 	initializePreflow();
 	for (int i = 0; i < sourceEdges.size(); i++)
@@ -313,7 +313,8 @@ long long Graph::result()
 int main()
 {
 	clock_t begin = clock();
-	int i, j, n, m, x, y, z;
+	int i, j, n, m, x, y;
+	float z;
 	list<int>::iterator iter;
 	cin >> n >> m;
 	Graph g(n);

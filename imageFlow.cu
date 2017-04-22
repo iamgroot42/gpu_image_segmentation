@@ -72,8 +72,7 @@ __global__ void push(Pixel *image_graph, unsigned long long *F, Terminal *source
 	int i = (threadIdx.x + blockIdx.x * blockDim.x) + 1;
 	int j = (threadIdx.y + blockDim.y * blockIdx.y) + 1;
 
-	if (i <= height && j <= width)
-	{
+	if (i <= height && j <= width){
 		int locali = (i - 1) % BLOCK_SIZE, localj = (j - 1) % BLOCK_SIZE;
 
 		__shared__ int shared_heights[BLOCK_SIZE + 2][BLOCK_SIZE + 2];
@@ -166,8 +165,7 @@ __global__ void pull(Pixel *image_graph, unsigned long long *F, Terminal *source
 	int j = threadIdx.y + blockDim.y * blockIdx.y + 1;
 
 	// Should be <=, but fails for that
-	if (i < height && j < width)
-	{
+	if (i < height && j < width){
 		unsigned long long aggregate_flow = 0;
 		// Row major traversal of neighbors of a pixel (i,j)
 		int x_offsets[] = {-1, -1, -1, 0, 0, 1, 1, 1};
@@ -336,8 +334,7 @@ __global__ void initNeighbors(Pixel *imagegraph, unsigned char* raw_image, int h
 
 	int locali = (i - 1) % BLOCK_SIZE, localj = (j - 1) % BLOCK_SIZE;
 
-	if (i <= height && j <= width)
-	{
+	if (i <= height && j <= width){
 		__shared__ unsigned long long block_pixels[BLOCK_SIZE + 2][BLOCK_SIZE + 2];
 		imagegraph[i * width + j].pixel_value = raw_image[(i - 1) * width + j - 1];
 		
@@ -409,8 +406,7 @@ __global__ void initConstraints(Pixel *imagegraph, int height, int width, unsign
 	int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
 	int j = threadIdx.y + blockDim.y * blockIdx.y + 1;
 
-	if (i <= height && j <= height)
-	{
+	if (i <= height && j <= height){
 		// {p,S} edge
 		imagegraph[i * width + j].neighbor_capacities[8] = (imagegraph[i * width + j].hard_constraint == 0) * K
 										+ (imagegraph[i * width + j].hard_constraint == 1) * LAMBDA * R_function(imagegraph[i * width + j].pixel_value, -1);
@@ -461,7 +457,7 @@ int main(int argc, char* argv[]){
 	cudaMemcpy(K_gpu, K, sizeof(unsigned long long), cudaMemcpyHostToDevice);
 	cudaMemcpy(convergence_flag_gpu, convergence_flag, sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(cuda_source, source, sizeof(Terminal), cudaMemcpyHostToDevice);
-        cudaMemcpy(cuda_sink, sink, sizeof(Terminal), cudaMemcpyHostToDevice);
+	cudaMemcpy(cuda_sink, sink, sizeof(Terminal), cudaMemcpyHostToDevice);
 
 
 	dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);

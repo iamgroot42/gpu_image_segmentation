@@ -11,7 +11,10 @@ def mask_image(image, coordinates):
 	print mask.shape
 	# for (x, y) in coordinates:
 	for x in coordinates:
-		mask[x] = 255
+		try:
+			mask[x - 1] = 255
+		except:
+			print len(mask), x
 		# mask[y] = 255
 	return mask.reshape(image.shape[:2])
 
