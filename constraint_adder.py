@@ -12,15 +12,10 @@ def mouse_callback(event, x, y, flags, params):
 	global counter
 	global data
 	if event == cv2.EVENT_LBUTTONDOWN:
+		print 'Captured object point'
 		object_points.append((x, y))
-		# counter += 1
-		# cv2.circle(data,(int(x),int(y)),10,(255,255,255),-11)
-		# cv2.circle(data,(int(x),int(y)),11,(0,0,255),1) # draw circle
-		# cv2.ellipse(data, (int(x),int(y)), (10,10), 0, 0, 90,(0,0,255),-1 )
-		# cv2.ellipse(data, (int(x),int(y)), (10,10), 0, 180, 270,(0,0,255),-1 )
-		# cv2.circle(data,(int(x),int(y)),1,(0,255,0),1) # draw center
-		# cv2.putText(data,str(counter),(int(x)+10,int(y)-10),cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(255,180,180))
 	elif event == cv2.EVENT_RBUTTONDOWN:
+		print 'Captured background point'
 		background_points.append((x, y))
 
 

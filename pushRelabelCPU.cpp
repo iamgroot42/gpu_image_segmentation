@@ -4,22 +4,25 @@
 #include <limits.h>
 #include <queue>
 
-#define FLATIMAGESIZE 316 * 300
+#define FLATIMAGESIZE 262 * 197
 
 using namespace std;
 
 struct Edge
 {
+	bool used;
 	int v;
 	long long capacity;
-	Edge(int v = -1, long long capacity = -1)
+	Edge(int v = -1, long long capacity = -1, bool used = false)
 	{
 		this -> v = v;
 		this -> capacity = capacity;
+		this -> used = false;
 	}
 };
 
 long long sourceEdges[FLATIMAGESIZE + 10], sinkEdges[FLATIMAGESIZE + 10];
+long long sourceEdgesCpy[FLATIMAGESIZE + 10], sinkEdgesCpy[FLATIMAGESIZE + 10];
 Edge edges[FLATIMAGESIZE + 10][10];
 
 class Graph
@@ -71,16 +74,28 @@ void Graph::addEdge(int u, int v, long long capacity)
 	if (u == this -> source)
 	{
 		if (sourceEdges[v] < 0)
+		{
 			sourceEdges[v] = capacity;
+			sourceEdgesCpy[v] = capacity;
+		}
 		else
+		{
 			sourceEdges[v] += capacity;
+			sourceEdgesCpy[v] += capacity;
+		}
 	}
 	else if (u == this -> sink)
 	{
 		if (sinkEdges[v] < 0)
+		{
 			sinkEdges[v] = capacity;
+			sinkEdgesCpy[v] = capacity;
+		}
 		else
+		{
 			sinkEdges[v] += capacity;
+			sinkEdgesCpy[v] += capacity;
+		}
 	}
 	else
 	{
@@ -94,7 +109,10 @@ void Graph::addEdge(int u, int v, long long capacity)
 				edges[u][i].capacity += capacity;
 			}
 			else if (edges[u][i].capacity == -1)
+			{
 				pos = i;
+				break;
+			}
 		}
 
 		if (!flag)
@@ -105,30 +123,40 @@ void Graph::addEdge(int u, int v, long long capacity)
 	}
 }
 
-// void Graph::BFS()
-// {
-// 	queue<int> neighbours;
-// 	list<int>::iterator iter;
-// 	reachable[this -> sink] = true;
-// 	neighbours.push(this -> sink);
+void Graph::BFS()
+{
+	queue<int> neighbours;
+	list<int>::iterator iter;
+	reachable[this -> source] = true;
+	neighbours.push(this -> source);
+	while (!neighbours.empty())
+	{
+		int x = neighbours.front(), y, i;
+		neighbours.pop();
 
-// 	while (!neighbours.empty())
-// 	{
-// 		int x = neighbours.front(), y;
-// 		neighbours.pop();
-
-// 		for (iter = adj[x].begin(); iter != adj[x].end(); iter++)
-// 		{
-// 			y = *iter;
-// 			if (!reachable[y] && y != this -> source)
-// 				if ( (x == sink && sinkEdges[y] > 0) || (x != source && x != sink && edges[x][y] > 0) )
-// 				{
-// 					reachable[y] = true;
-// 					neighbours.push(y);
-// 				}
-// 		}
-// 	}
-// }
+		for (iter = adj[x].begin(); iter != adj[x].end(); iter++)
+		{
+			y = *iter;
+			if (!reachable[y])
+			{
+				if (x == this -> source && sourceEdges[y] > 0 && sourceEdges[y] < sourceEdgesCpy[y])
+				{
+					cout << y << '\n';
+					reachable[y] = true;
+					neighbours.push(y);
+				}
+				else if  (x != this -> sink && x != this -> source)
+					for (i = 0; i < 10; i++)
+						if (edges[x][i].v == y && edges[x][i].capacity > 0 && edges[x][i].used)
+						{
+							cout << x << ' ' << y << ' ' << edges[x][i].capacity << '\n';
+							reachable[y] = true;
+							neighbours.push(y);
+						}
+			}
+		}
+	}
+}
 
 void Graph::initializePreflow()
 {
@@ -219,7 +247,10 @@ void Graph::push(int u, int v)
 		else
 			for (i = 0; i < 10; i++)
 				if (edges[v][i].v == u)
+				{
 					edges[v][i].capacity += diff;
+					edges[v][i].used = true;
+				}
 	}
 	else if (u == this -> sink)
 	{
@@ -229,11 +260,15 @@ void Graph::push(int u, int v)
 		else
 			for (i = 0; i < 10; i++)
 				if (edges[v][i].v == u)
+				{
 					edges[v][i].capacity += diff;
+					edges[v][i].used = true;
+				}
 	}
 	else
 	{
 		edges[u][pos].capacity -= diff;
+		edges[u][pos].used = true;
 		if (v == this -> source)
 			sourceEdges[u] += diff;
 		else if (v == this -> sink)
@@ -241,7 +276,10 @@ void Graph::push(int u, int v)
 		else
 			for (i = 0; i < 10; i++)
 				if (edges[v][i].v == u)
+				{
 					edges[v][i].capacity += diff;
+					edges[v][i].used = true;
+				}
 	}
 	markActive(v);
 }
@@ -261,6 +299,8 @@ long long Graph::result()
 		activeVertices.pop();
 		active[u] = false;
 
+		// cout << adj[u].size() << ' ';
+
 		if (u == source || u == sink)
 			continue;
 
@@ -275,6 +315,7 @@ long long Graph::result()
 			else
 				relabel(u);
 		}
+		// cout << excess[activeVertices.front()] << ' ' << label[activeVertices.front()] << '\n';
 		count++;
 	}
 	return maxFlow = excess[sink];
@@ -299,4 +340,7 @@ int main()
 			g.addEdge(x - 1, y - 1, z);
 	}
 	cout << g.result() << '\n';
+	g.BFS();
+	for (i = 0; i < n; i++)
+		cout << g.reachable[i] << ' ';
 }
