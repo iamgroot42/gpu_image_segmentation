@@ -1,7 +1,9 @@
 #include <bits/stdc++.h>
 
 #define maxNeighbours 10
-#define imageSize 262 * 197
+// #define imageSize 167 * 301
+// #define imageSize 262 * 197
+#define imageSize 600 * 340
 using namespace std;
 
 struct Edge

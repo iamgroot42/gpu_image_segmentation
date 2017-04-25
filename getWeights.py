@@ -71,9 +71,9 @@ def createWeights(pixmap, G, height, width, OH, BH):
 			u = (i * height) + j
 			if (G.constraints[u] == 0):
 				G.addEdge(u + 1, 0, K)
-			elif (G.constraints[u] == -1):
-				weight = LAMBDA * region_function(pixmap, (i,j), 'bkg', BH)
-				G.addEdge(u + 1, 0, weight)
+			# elif (G.constraints[u] == -1):
+			# 	weight = LAMBDA * region_function(pixmap, (i,j), 'bkg', BH)
+			# 	G.addEdge(u + 1, 0, weight)
 	# {p,T} type edges
 	v = n_nodes - 1
 	for i in range(width):
@@ -81,9 +81,9 @@ def createWeights(pixmap, G, height, width, OH, BH):
 			u = (i * height) + j
 			if (G.constraints[u] == 1):
 				G.addEdge(u + 1, v, K)
-			elif (G.constraints[u] == -1):
-				weight = LAMBDA * region_function(pixmap, (i,j), 'obj', OH)
-				G.addEdge(u + 1, v, weight)
+			# elif (G.constraints[u] == -1):
+			# 	weight = LAMBDA * region_function(pixmap, (i,j), 'obj', OH)
+			# 	G.addEdge(u + 1, v, weight)
 	return G
 
 def load_constraints(image, filename, G, constraint_type, height):

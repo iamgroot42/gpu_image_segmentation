@@ -3,7 +3,7 @@ LDFLAGS =  -O2 -lm -lstdc++ -lIL -lILU
 
 
 all:
-	g++ temp2.cpp -o pushRelabel.out -g
+	g++ temp2.cpp -g
 	# nvcc imageFlow.cu ${GPPFLAGS} ${LDFLAGS} -g -G
 
 clean:
