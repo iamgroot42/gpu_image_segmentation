@@ -3,7 +3,9 @@
 #define maxNeighbours 10
 // #define imageSize 167 * 301
 // #define imageSize 262 * 197
-#define imageSize 600 * 340
+// #define imageSize 600 * 340
+#define imageSize 900 * 637
+
 using namespace std;
 
 struct Edge
@@ -76,10 +78,7 @@ bool BFSAux(int y, vector<Edge> & edgeSet)
 	bool flag = true;
 	for (int i = 0; i < edgeSet.size(); i++)
 		if (edgeSet[i].v == y && edgeSet[i].capacity > edgeSet[i].flow && edgeSet[i].flow > 0.0)
-		{
-			// cout << edgeSet[i].capacity << ' ' <<  edgeSet[i].flow << '\n';
 			flag = true;
-		}
 	return flag;
 }
 
@@ -295,12 +294,13 @@ float Graph::result()
 		for (int i = 0; i < maxNeighbours; i++)
 			if (edges[u][i].capacity > edges[u][i].flow)
 				push(u, edges[u][i].v);
-		if (excess[u] > 0)
+		if (excess[u] > 0.0)
 		{
 			bool temp = false;
 			for (int i = 0; i < maxNeighbours; i++)
-				if (label[u] <= label[edges[u][i].v] && edges[u][i].capacity > edges[u][i].flow)
-					temp = true;
+				if (edges[u][i].capacity > edges[u][i].flow)
+					if (label[u] <= label[edges[u][i].v] && label[edges[u][i].v] != this -> V + 1)
+						temp = true;
 			if (!temp)
 				continue;
 			if (labelCount[label[u]] == 1)

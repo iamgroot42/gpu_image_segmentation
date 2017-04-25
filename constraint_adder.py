@@ -12,10 +12,8 @@ def mouse_callback(event, x, y, flags, params):
 	global counter
 	global data
 	if event == cv2.EVENT_LBUTTONDOWN:
-		print 'Captured object point'
 		object_points.append((x, y))
 	elif event == cv2.EVENT_RBUTTONDOWN:
-		print 'Captured background point'
 		background_points.append((x, y))
 
 
