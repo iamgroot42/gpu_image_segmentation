@@ -11,7 +11,7 @@ using namespace std;
 
 __device__ unsigned long long B_function(int x, int y){
 	// return (x - y) * (x - y);
-	return abs(x - y);
+	return 100 / abs(x - y + 1);
 }
 
 __device__ unsigned long long R_function(int x, int y){
@@ -76,9 +76,8 @@ __global__ void push(Pixel *image_graph, unsigned long long *F, Terminal *source
 
 	if (i <= height && j <= width){
 
-		// unsigned long long *neighbor_flows = image_graph[i * width + j].neighbor_flows;
-		// unsigned long long *neighbor_capacities = image_graph[i * width + j].neighbor_capacities;
-		unsigned long long excess = image_graph[i * width + j].excess;
+		unsigned long long *neighbor_flows = image_graph[i * width + j].neighbor_flows;
+		unsigned long long *neighbor_capacities = image_graph[i * width + j].neighbor_capacities;
 
 		// Row major traversal of neighbors of a pixel (i,j)
 		int x_offsets[] = {-1, -1, -1, 0, 0, 1, 1, 1};
@@ -87,58 +86,70 @@ __global__ void push(Pixel *image_graph, unsigned long long *F, Terminal *source
 		int thread_flag = 0;
 		int dest_x, dest_y;
 
-
 		// Check spatial neighbors
 		for(int l = 0; l < 8; l++){
 			dest_x = i + x_offsets[l];
 			dest_y = j + y_offsets[l];
 			if(image_graph[dest_x * width + dest_y].height + 1 == image_graph[i * width + j].height){
-				int flow = min(image_graph[i * width + j].neighbor_capacities[l] - image_graph[i * width + j].neighbor_flows[l], excess);
-				atomicAdd(&(image_graph[i * width + j].excess) , -flow) ;
-				atomicAdd(&(image_graph[dest_x * width + dest_y].excess), flow) ;
-				atomicAdd(&(image_graph[i * width + j].neighbor_capacities[l]) , -flow) ;
-				atomicAdd(&(image_graph[dest_x * width + dest_y].neighbor_capacities[7 - l]), flow) ;
+				int flow = min(image_graph[i * width + j].neighbor_capacities[l], image_graph[i * width + j].excess );
+				atomicAdd( &(image_graph[i * width + j].excess ) , -1*flow  ) ;
+				atomicAdd( &(image_graph[dest_x * width + dest_y].excess ) , flow  ) ;
+				atomicAdd( &(image_graph[i * width + j].neighbor_capacities[l] ) , -1*flow  ) ;
+				atomicAdd( &(image_graph[dest_x * width + dest_y].neighbor_capacities[7 - l] ) , flow  ) ;
 				thread_flag = 1;
 			}
 		}
 
 		unsigned long long flow = min(image_graph[i * width + j].excess, image_graph[i * width + j].neighbor_capacities[9]);
-		atomicAdd(&image_graph[i * width + j].neighbor_flows[9], flow);
+		atomicAdd(&image_graph[i * width + j].neighbor_capacities[9], flow);
 		if (image_graph[i * width + j].excess == flow)
 			atomicAdd(&image_graph[i * width + j].excess, -flow);
 		atomicAdd(&(sink -> excess), flow);
+
+		// if( source->height + 1 == shared_heights[locali + 1][localj + 1]){
+		//	source->excess += shared_heights[locali + 1][localj + 1];
+		//	thread_flag = 1;
+		// }
+
+		// if( sink->height + 1 == shared_heights[locali + 1][localj + 1]){
+		//	sink->excess += shared_heights[locali + 1][localj + 1];
+		//	thread_flag = 1;
+		// }
+
 		__syncthreads();
+
 		// Update flags
-		atomicOr(convergence_flag, thread_flag);		
+		atomicOr(convergence_flag, thread_flag);
+		
 		// printf("%d ", *convergence_flag);
 	}
 }
 
 // __global__ void pull(Pixel *image_graph, unsigned long long *F, Terminal *source, Terminal *sink, int height, int width){
-// 	int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
-// 	int j = threadIdx.y + blockDim.y * blockIdx.y + 1;
+//	int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
+//	int j = threadIdx.y + blockDim.y * blockIdx.y + 1;
 
-// 	// Should be <=, but fails for that
-// 	if (i < height && j < width){
-// 		unsigned long long aggregate_flow = 0;
-// 		// Row major traversal of neighbors of a pixel (i,j)
-// 		int x_offsets[] = {-1, -1, -1, 0, 0, 1, 1, 1};
-// 		int y_offsets[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+//	// Should be <=, but fails for that
+//	if (i < height && j < width){
+//		unsigned long long aggregate_flow = 0;
+//		// Row major traversal of neighbors of a pixel (i,j)
+//		int x_offsets[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+//		int y_offsets[] = {-1, 0, 1, -1, 1, -1, 0, 1};
 
-// 		int dest_x, dest_y;
+//		int dest_x, dest_y;
 
-// 		// Check spatial neighbors
-// 		for(int k = 0; k < 8; k++){
-// 			dest_x = i + x_offsets[k];
-// 			dest_y = j + y_offsets[k];
-// 			aggregate_flow += F[dest_x * width + dest_y];
-// 		}
+//		// Check spatial neighbors
+//		for(int k = 0; k < 8; k++){
+//			dest_x = i + x_offsets[k];
+//			dest_y = j + y_offsets[k];
+//			aggregate_flow += F[dest_x * width + dest_y];
+//		}
 
-// 		aggregate_flow += source->excess;
-// 		// aggregate_flow += source->excess;
+//		aggregate_flow += source->excess;
+//		// aggregate_flow += source->excess;
 
-// 		image_graph[i * width + j].excess += aggregate_flow;
-// 	}
+//		image_graph[i * width + j].excess += aggregate_flow;
+//		}
 // }
 
 // __global__ void localRelabel(Pixel *image_graph, Terminal *source, Terminal *sink, int height, int width){
@@ -209,27 +220,6 @@ __global__ void push(Pixel *image_graph, unsigned long long *F, Terminal *source
 // 	}
 // }
 
-__global__ void localRelabel(Pixel *image_graph, int height, int width)
-{
-	int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
-	int j = threadIdx.y + blockIdx.x * blockDim.y + 1;
-
-	if (i <= height && j <= width)
-	{
-		// Row major traversal of neighbors of a pixel (i,j)
-		int x_offsets[] = {-1, -1, -1, 0, 0, 1, 1, 1};
-		int y_offsets[] = {-1, 0, 1, -1, 1, -1, 0, 1};
-
-		int dest_x, dest_y, min_height = image_graph[i * width + j].height;
-		for(int l = 0; l < 8; l++){
-			dest_x = i + x_offsets[l];
-			dest_y = j + y_offsets[l];
-			min_height = min(min_height, image_graph[dest_x * width + dest_y].height);
-		}
-		image_graph[i * width + j].height = min(min_height + 1, image_graph[i * width + j].height);
-	}
-}
-
 // __global__ void globalRelabel(Pixel *image_graph, int height, int width, int iteration){
 // 	int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
 // 	int j = threadIdx.y + blockDim.y * blockIdx.y + 1;
@@ -269,13 +259,13 @@ __global__ void localRelabel(Pixel *image_graph, int height, int width)
 // 	}
 // }
 
-__global__ void initNeighbors(Pixel *image_graph, unsigned char* raw_image, int height, int width, unsigned long long int* K)
+__global__ void initNeighbors(Pixel *imagegraph, unsigned char* raw_image, int height, int width, unsigned long long int* K)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
 	int j = threadIdx.y + blockDim.y * blockIdx.y + 1;
 
 	if (i <= height && j <= width){
-		image_graph[i * width + j].pixel_value = raw_image[(i - 1) * width + j - 1];
+		imagegraph[i * width + j].pixel_value = raw_image[(i - 1) * width + j - 1];
 
 		// Row major traversal of neighbors of a pixel (i,j)
 		int x_offsets[] = {-1, -1, -1, 0, 0, 1, 1, 1};
@@ -288,9 +278,9 @@ __global__ void initNeighbors(Pixel *image_graph, unsigned char* raw_image, int 
 		for(int k = 0; k < 8; k++){
 			dest_x = i + x_offsets[k];
 			dest_y = j + y_offsets[k];
-			edge_weight = B_function(image_graph[i * width + j].pixel_value, image_graph[dest_x * width + dest_y].pixel_value	);
-			image_graph[i * width + j].neighbor_capacities[k] = edge_weight;
-			image_graph[i * width + j].neighbor_flows[k] = 0;
+			edge_weight = B_function(imagegraph[i * width + j].pixel_value, imagegraph[dest_x * width + dest_y].pixel_value	);
+			imagegraph[i * width + j].neighbor_capacities[k] = edge_weight;
+			imagegraph[i * width + j].neighbor_flows[k] = 0;
 			max_k += edge_weight;
 		}
 		max_k++;
@@ -301,20 +291,20 @@ __global__ void initNeighbors(Pixel *image_graph, unsigned char* raw_image, int 
 }
 
 //Also accept hard and soft constraints array
-// __global__ void initConstraints(Pixel *image_graph, int height, int width, unsigned long long K){
+// __global__ void initConstraints(Pixel *imagegraph, int height, int width, unsigned long long K){
 
-// 	int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
-// 	int j = threadIdx.y + blockDim.y * blockIdx.y + 1;
+//	int i = threadIdx.x + blockIdx.x * blockDim.x + 1;
+//	int j = threadIdx.y + blockDim.y * blockIdx.y + 1;
 
-// 	if (i <= height && j <= height){
-// 		// {p,S} edge
-// 		image_graph[i * width + j].neighbor_capacities[8] = (image_graph[i * width + j].hard_constraint == 0) * K
-// 										+ (image_graph[i * width + j].hard_constraint == 1) * LAMBDA * R_function(image_graph[i * width + j].pixel_value, -1);
+//	if (i <= height && j <= height){
+//		// {p,S} edge
+//		imagegraph[i * width + j].neighbor_capacities[8] = (imagegraph[i * width + j].hard_constraint == 0) * K
+//		+ (imagegraph[i * width + j].hard_constraint == 1) * LAMBDA * R_function(imagegraph[i * width + j].pixel_value, -1);
 
-// 		// {p,T} edge
-// 		image_graph[i * width + j].neighbor_capacities[9] = (image_graph[i * width + j].hard_constraint == -1) * K
-// 										+ (image_graph[i * width + j].hard_constraint == 0) * LAMBDA * R_function(image_graph[i * width + j].pixel_value, 1);
-// 	}
+//		// {p,T} edge
+//		imagegraph[i * width + j].neighbor_capacities[9] = (imagegraph[i * width + j].hard_constraint == -1) * K
+//		+  (imagegraph[i * width + j].hard_constraint == 0) * LAMBDA * R_function(imagegraph[i * width + j].pixel_value, 1);
+//	}
 // }
 
 
@@ -369,7 +359,7 @@ int main(int argc, char* argv[]){
 
 	// cudaMemcpy(image_graph, cuda_image_graph, pixel_memsize, cudaMemcpyDeviceToHost);
 	// for (int i = 0; i < (width + 1) * (height + 1); i++)
-	// 	cout << image_graph[i].neighbor_capacities[0] << ' ';
+	//	cout << image_graph[i].neighbor_capacities[0] << ' ';
 	// cout << cudaGetErrorString(cudaGetLastError()) << endl;
 	// initConstraints<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, height, width, *K);
 	// assert(cudaSuccess == cudaGetLastError());
@@ -386,19 +376,22 @@ int main(int argc, char* argv[]){
 				// assert(cudaSuccess == cudaGetLastError());
 				// printf("Local pull operation\n");
 				cudaMemcpy(convergence_flag, convergence_flag_gpu, sizeof(int), cudaMemcpyDeviceToHost);
-				// printf("%d\n", *convergence_flag);
+				printf("%d\n", *convergence_flag);
 			}
-			localRelabel<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, height, width);
-			assert(cudaSuccess == cudaGetLastError());
-			printf("Local relabel operation\n");
+			// localRelabel<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, cuda_source, cuda_sink, height, width);
+			// assert(cudaSuccess == cudaGetLastError());
+			// printf("Local relabel operation\n");
 		}
 		// globalRelabel<<<numBlocks, threadsPerBlock>>>(cuda_image_graph, height, width, iteration);
 		// assert(cudaSuccess == cudaGetLastError());
 		// printf("Global relabel operation\n");
-		// iteration++;
-		// printf("Completed iteration %d\n\n", iteration);
-		// cudaMemcpy(sink, cuda_sink, sizeof(Terminal), cudaMemcpyDeviceToHost);
-		// printf("Flow: %llu\n", sink -> excess);
+		iteration++;
+		printf("Completed iteration %d\n\n", iteration);
+		cudaMemcpy(sink, cuda_sink, sizeof(Terminal), cudaMemcpyDeviceToHost);
+		printf("Flow: %llu\n", sink -> excess);
+
+		if (iteration > 2)
+			break;
 	}
 
 	printf("Done with algorithm\n");
